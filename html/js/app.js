@@ -12,7 +12,7 @@ const DOM = {
   hungerBar: $('hunger-bar'), hungerVal: $('hunger-val'),
   thirstBar: $('thirst-bar'), thirstVal: $('thirst-val'),
   rowHunger: $('row-hunger'), rowThirst: $('row-thirst'),
-  speedometer: $('speedometer'),
+  speedometer: $('speedometer'), speedUnit: $('speed-unit'),
   speedVal: $('speed-value'), gearVal: $('gear-val'), rpmFill: $('rpm-fill'),
   streetName: $('street-name'), streetZone: $('street-zone'),
   compassDir: $('compass-dir'),
@@ -28,19 +28,32 @@ const DOM = {
   bottomLeft:  $('bottom-left'),
   bottomRight: $('bottom-right'),
   // settings
-  overlay:   $('settings-overlay'),
-  panel:     $('settings-panel'),
+  overlay: $('settings-overlay'),
   // cinematic
-  cinTop:    $('cinematic-top'),
-  cinBot:    $('cinematic-bottom'),
+  cinTop: $('cinematic-top'),
+  cinBot: $('cinematic-bottom'),
   // vignette / notifications / voice
-  vignette:  $('health-vignette'),
-  notifWrap: $('notif-wrap'),
-  rowVoice:  $('row-voice'),
-  voiceLabel: $('voice-state-label'),
+  vignette:      $('health-vignette'),
+  notifWrap:     $('notif-wrap'),
+  rowVoice:      $('row-voice'),
+  voiceLabel:    $('voice-state-label'),
   playerIdValue: $('player-id-value'),
+  playerIdRow:   $('player-id-row'),
   // drag
   dragBanner: $('drag-banner'),
+};
+
+// ─── CONFIG (valori di default; sovrascrittti da loadConfig) ─────────────────
+const cfg = {
+  speedUnit:        'km/h',
+  vignetteLow:      40,
+  vignetteCritical: 20,
+  engineGood:       70,
+  engineWarn:       40,
+  lowBarThreshold:  25,
+  notifDuration:    4500,
+  notifMax:         5,
+  showPlayerId:     true,
 };
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
@@ -50,7 +63,6 @@ const state = {
   iconStyle: 1,
   theme: 'indaco',
 
-  // persisted via localStorage
   vis: {
     health: true, armor: true,
     hunger: true, thirst: true,
@@ -65,7 +77,6 @@ const state = {
   positions:     {},
 };
 
-// ─── DRAGGABLE CONFIG ────────────────────────────────────────────────────────
 const DRAGGABLE_IDS = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
 
 // ─── THEMES ──────────────────────────────────────────────────────────────────
@@ -87,7 +98,7 @@ function animateCount(el, to, duration = 280, fmt = v => String(Math.round(v))) 
   const start = performance.now();
   function tick(now) {
     const t = Math.min(1, (now - start) / duration);
-    const ease = 1 - Math.pow(1 - t, 3); // ease-out-cubic
+    const ease = 1 - Math.pow(1 - t, 3);
     el.textContent = fmt(from + (to - from) * ease);
     if (t < 1) requestAnimationFrame(tick);
     else el.textContent = fmt(to);
@@ -99,14 +110,14 @@ function setBar(bar, valEl, value, max = 100) {
   const pct = Math.min(100, Math.max(0, (value / max) * 100));
   bar.style.width = pct + '%';
   animateCount(valEl, value);
-  bar.classList.toggle('low', pct <= 25);
+  bar.classList.toggle('low', pct <= cfg.lowBarThreshold);
 }
 
 function formatMoney(n) {
   return '$' + Number(n).toLocaleString('it-IT');
 }
 
-const RPM_CIRC = 2 * Math.PI * 50; // ≈ 314
+const RPM_CIRC = 2 * Math.PI * 50;
 function setRpm(rpm) {
   const filled = Math.min(1, rpm) * RPM_CIRC;
   DOM.rpmFill.style.strokeDasharray = `${filled} ${RPM_CIRC}`;
@@ -131,31 +142,34 @@ function applyTheme(key) {
   });
 }
 
-// ─── ENGINE BAR (dynamic colour) ─────────────────────────────────────────────
+// ─── ENGINE BAR ──────────────────────────────────────────────────────────────
 function updateEngineBar(val) {
   const pct = Math.min(100, Math.max(0, val));
   DOM.engineBar.style.width = pct + '%';
-  const clr = val > 70 ? 'var(--clr-cash)' : val > 40 ? 'var(--clr-hunger)' : 'var(--clr-health)';
+  const clr = val > cfg.engineGood
+    ? 'var(--clr-cash)'
+    : val > cfg.engineWarn
+      ? 'var(--clr-hunger)'
+      : 'var(--clr-health)';
   DOM.engineBar.style.setProperty('--clr-engine', clr);
-  DOM.engineBar.classList.toggle('low', pct <= 25);
+  DOM.engineBar.classList.toggle('low', pct <= cfg.lowBarThreshold);
   animateCount(DOM.engineVal, val);
 }
 
-// ─── VISIBILITY APPLY ────────────────────────────────────────────────────────
+// ─── VISIBILITY ──────────────────────────────────────────────────────────────
 function applyVisibility() {
   const v = state.vis;
-
   toggleEl(document.querySelector('.stat-row[data-hud="health"]'), v.health);
   toggleEl(document.querySelector('.stat-row[data-hud="armor"]'),  v.armor);
   if (state.hasStatus) {
     toggleEl(DOM.rowHunger, v.hunger);
     toggleEl(DOM.rowThirst, v.thirst);
   }
-  toggleEl(DOM.topRight, v.money);
-  toggleEl($('job-card'),  v.job);
-  toggleEl(DOM.topLeft,   v.clock);
-  toggleEl($('compass-wrap'), v.compass);
-  toggleEl($('street-info'),  v.street);
+  toggleEl(DOM.topRight,       v.money);
+  toggleEl($('job-card'),      v.job);
+  toggleEl(DOM.topLeft,        v.clock);
+  toggleEl($('compass-wrap'),  v.compass);
+  toggleEl($('street-info'),   v.street);
   if (!v.speed) {
     DOM.speedometer.classList.add('hidden');
   } else if (state.inVehicle) {
@@ -165,11 +179,11 @@ function applyVisibility() {
 
 function toggleEl(el, visible) {
   if (!el) return;
-  el.style.opacity = visible ? '' : '0';
+  el.style.opacity       = visible ? '' : '0';
   el.style.pointerEvents = visible ? '' : 'none';
 }
 
-// ─── CINEMATIC MODE ──────────────────────────────────────────────────────────
+// ─── CINEMATIC ───────────────────────────────────────────────────────────────
 function setCinematic(on) {
   document.body.classList.toggle('cinematic', on);
 }
@@ -177,30 +191,30 @@ function setCinematic(on) {
 // ─── HEALTH VIGNETTE ─────────────────────────────────────────────────────────
 function updateVignette(health) {
   const v = DOM.vignette;
-  if (health > 40) {
+  if (health > cfg.vignetteLow) {
     v.className = '';
-  } else if (health > 20) {
-    const intensity = ((40 - health) / 40 * 0.55 + 0.1).toFixed(2);
+  } else if (health > cfg.vignetteCritical) {
+    const range = cfg.vignetteLow - cfg.vignetteCritical;
+    const intensity = ((cfg.vignetteLow - health) / range * 0.55 + 0.1).toFixed(2);
     v.style.setProperty('--vig-op', intensity);
     v.className = 'low';
   } else {
-    const intensity = Math.min(0.75, 0.45 + (20 - health) / 40).toFixed(2);
+    const intensity = Math.min(0.75, 0.45 + (cfg.vignetteCritical - health) / 40).toFixed(2);
     v.style.setProperty('--vig-op', intensity);
     v.className = 'low critical';
   }
 }
 
 // ─── NOTIFICATIONS ───────────────────────────────────────────────────────────
-const NOTIF_MAX = 5;
 const NOTIF_ICONS  = { success: '✓', error: '✕', info: 'ℹ', warning: '⚠' };
 const NOTIF_TITLES = { success: 'Successo', error: 'Errore', info: 'Info', warning: 'Attenzione' };
 
 function addNotification(type, msg, duration) {
-  duration = duration || 4500;
+  duration = duration || cfg.notifDuration;
   type = ['success','error','info','warning'].includes(type) ? type : 'info';
 
   const existing = DOM.notifWrap.querySelectorAll('.notif');
-  if (existing.length >= NOTIF_MAX) dismissNotif(existing[existing.length - 1]);
+  if (existing.length >= cfg.notifMax) dismissNotif(existing[existing.length - 1]);
 
   const el = document.createElement('div');
   el.className = `notif notif-${type}`;
@@ -223,8 +237,7 @@ function addNotification(type, msg, duration) {
   }));
 
   el.querySelector('.notif-close').addEventListener('click', e => {
-    e.stopPropagation();
-    dismissNotif(el);
+    e.stopPropagation(); dismissNotif(el);
   });
   el.addEventListener('click', () => dismissNotif(el));
   el._timer = setTimeout(() => dismissNotif(el), duration);
@@ -257,7 +270,7 @@ function applyIconStyle(n) {
   });
 }
 
-// ─── PERSISTENCE (localStorage) ──────────────────────────────────────────────
+// ─── PERSISTENCE ─────────────────────────────────────────────────────────────
 function saveLocal() {
   try {
     localStorage.setItem('hud_vis', JSON.stringify(state.vis));
@@ -386,7 +399,7 @@ function openSettings(luaSettings) {
   }
 
   snapshot = {
-    vis: { ...state.vis },
+    vis:          { ...state.vis },
     minimapCircle: state.minimapCircle,
     hideRadar:     state.hideRadar,
     hudDisabled:   state.hudDisabled,
@@ -455,9 +468,8 @@ function syncPanelToState() {
   applyTheme(state.theme);
 }
 
-// ─── PANEL EVENT WIRING ──────────────────────────────────────────────────────
+// ─── PANEL WIRING ────────────────────────────────────────────────────────────
 function wireSettings() {
-  // Tabs
   document.querySelectorAll('.sp-tab').forEach(btn => {
     btn.addEventListener('click', function() {
       document.querySelectorAll('.sp-tab').forEach(t => t.classList.remove('active'));
@@ -467,7 +479,6 @@ function wireSettings() {
     });
   });
 
-  // Visibility toggles
   const visToggles = {
     'v-health': 'health', 'v-armor': 'armor',
     'v-hunger': 'hunger', 'v-thirst': 'thirst',
@@ -482,14 +493,8 @@ function wireSettings() {
     });
   });
 
-  $('v-hideradar').addEventListener('change', function() {
-    state.hideRadar = this.checked;
-  });
-
-  $('v-huddisabled').addEventListener('change', function() {
-    state.hudDisabled = this.checked;
-  });
-
+  $('v-hideradar').addEventListener('change',   function() { state.hideRadar   = this.checked; });
+  $('v-huddisabled').addEventListener('change', function() { state.hudDisabled = this.checked; });
   $('v-cinematic').addEventListener('change', function() {
     state.cinematic = this.checked;
     setCinematic(state.cinematic);
@@ -507,7 +512,6 @@ function wireSettings() {
     $('shape-square').classList.remove('active');
   });
 
-  // Drag buttons
   $('btn-enable-drag').addEventListener('click', function() {
     if (dragModeActive) {
       disableDragMode();
@@ -524,21 +528,16 @@ function wireSettings() {
 
   $('btn-reset-pos').addEventListener('click', resetPositions);
 
-  // Icon style cards
   document.querySelectorAll('.icon-style-card').forEach(card => {
     card.addEventListener('click', function() {
       applyIconStyle(parseInt(this.dataset.style));
     });
   });
 
-  // Theme buttons — instant preview
   document.querySelectorAll('.theme-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-      applyTheme(this.dataset.theme);
-    });
+    btn.addEventListener('click', function() { applyTheme(this.dataset.theme); });
   });
 
-  // Close / save / cancel
   $('sp-close').addEventListener('click',  cancelSettings);
   $('sp-cancel').addEventListener('click', cancelSettings);
   $('sp-save').addEventListener('click',   saveSettings);
@@ -581,8 +580,18 @@ window.addEventListener('message', function(e) {
       document.body.style.visibility = 'hidden';
       break;
 
-    case 'openSettings':
-      openSettings(data.settings);
+    case 'loadConfig':
+      if (data.speedUnit        !== undefined) cfg.speedUnit        = data.speedUnit;
+      if (data.vignetteLow      !== undefined) cfg.vignetteLow      = data.vignetteLow;
+      if (data.vignetteCritical !== undefined) cfg.vignetteCritical = data.vignetteCritical;
+      if (data.engineGood       !== undefined) cfg.engineGood       = data.engineGood;
+      if (data.engineWarn       !== undefined) cfg.engineWarn       = data.engineWarn;
+      if (data.lowBarThreshold  !== undefined) cfg.lowBarThreshold  = data.lowBarThreshold;
+      if (data.notifDuration    !== undefined) cfg.notifDuration    = data.notifDuration;
+      if (data.notifMax         !== undefined) cfg.notifMax         = data.notifMax;
+      if (data.showPlayerId     !== undefined) cfg.showPlayerId     = data.showPlayerId;
+      DOM.speedUnit.textContent = cfg.speedUnit;
+      if (!cfg.showPlayerId && DOM.playerIdRow) DOM.playerIdRow.style.display = 'none';
       break;
 
     case 'loadSettings':
@@ -593,6 +602,10 @@ window.addEventListener('message', function(e) {
         state.cinematic     = data.settings.cinematicMode || false;
         setCinematic(state.cinematic);
       }
+      break;
+
+    case 'openSettings':
+      openSettings(data.settings);
       break;
 
     case 'status':
@@ -637,8 +650,8 @@ window.addEventListener('message', function(e) {
       if (data.job   !== undefined) DOM.jobLabel.textContent = data.job   || 'Disoccupato';
       if (data.grade !== undefined) DOM.jobGrade.textContent = data.grade || '';
       if (data.street)  DOM.streetName.textContent = data.street;
-      if (data.zone)    DOM.streetZone.textContent = data.zone;
-      if (data.compass) DOM.compassDir.textContent = data.compass;
+      if (data.zone)    DOM.streetZone.textContent  = data.zone;
+      if (data.compass) DOM.compassDir.textContent  = data.compass;
 
       state.inVehicle = !!data.inVehicle;
       if (data.inVehicle && state.vis.speed) {
@@ -650,12 +663,10 @@ window.addEventListener('message', function(e) {
         DOM.speedometer.classList.add('hidden');
       }
 
-      // Vehicle status panel (engine / fuel / seatbelt)
       if (data.inVehicle) {
         DOM.vehicleStatus.classList.remove('hidden');
         updateEngineBar(data.engineHealth ?? 100);
         setBar(DOM.fuelBar, DOM.fuelVal, data.fuelLevel ?? 100);
-
         const belted = !!data.seatbelt;
         DOM.seatbeltRow.classList.toggle('belted',   belted);
         DOM.seatbeltRow.classList.toggle('unbelted', !belted);

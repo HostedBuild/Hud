@@ -1,10 +1,10 @@
 local ESX = nil
 
 local settings = {
-    hudDisabled   = false,
-    cinematicMode = false,
-    hideRadar     = false,
-    minimapCircle = false,
+    hudDisabled   = Config.Defaults.hudDisabled,
+    cinematicMode = Config.Defaults.cinematicMode,
+    hideRadar     = Config.Defaults.hideRadar,
+    minimapCircle = Config.Defaults.minimapCircle,
 }
 
 -- ─── Init ────────────────────────────────────────────────────────────────────
@@ -16,7 +16,7 @@ Citizen.CreateThread(function()
             action    = 'notification',
             notifType = notifType or 'info',
             msg       = msg,
-            duration  = (length or 4) * 1000,
+            duration  = length and (length * 1000) or Config.NotifDuration,
         })
     end
 
@@ -31,9 +31,25 @@ Citizen.CreateThread(function()
     pcall(SetMinimapClipType, settings.minimapCircle and 1 or 0)
 
     Wait(800)
+
+    SendNUIMessage({
+        action           = 'loadConfig',
+        speedUnit        = Config.SpeedUnit == 'mph' and 'mph' or 'km/h',
+        vignetteLow      = Config.VignetteLow,
+        vignetteCritical = Config.VignetteCritical,
+        engineGood       = Config.EngineGood,
+        engineWarn       = Config.EngineWarn,
+        lowBarThreshold  = Config.LowBarThreshold,
+        notifDuration    = Config.NotifDuration,
+        notifMax         = Config.NotifMax,
+        showPlayerId     = Config.ShowPlayerId,
+    })
     SendNUIMessage({ action = 'loadSettings', settings = settings })
     SendNUIMessage({ action = 'show' })
-    SendNUIMessage({ action = 'playerInfo', serverId = GetPlayerServerId(PlayerId()) })
+
+    if Config.ShowPlayerId then
+        SendNUIMessage({ action = 'playerInfo', serverId = GetPlayerServerId(PlayerId()) })
+    end
 end)
 
 AddEventHandler('esx:playerLoaded', function()
@@ -43,7 +59,7 @@ AddEventHandler('esx:playerLoaded', function()
             action    = 'notification',
             notifType = notifType or 'info',
             msg       = msg,
-            duration  = (length or 4) * 1000,
+            duration  = length and (length * 1000) or Config.NotifDuration,
         })
     end
 end)
@@ -60,26 +76,36 @@ exports('showNotification', function(msg, notifType, duration)
         action    = 'notification',
         notifType = notifType or 'info',
         msg       = msg,
-        duration  = duration or 4500,
+        duration  = duration or Config.NotifDuration,
     })
 end)
 
 -- ─── Voice events ────────────────────────────────────────────────────────────
-AddEventHandler('pma-voice:setTalkingMode', function(mode)
-    SendNUIMessage({ action = 'voiceState', mode = mode })
-end)
-AddEventHandler('pma-voice:proximityChanged', function(range)
-    SendNUIMessage({ action = 'voiceRange', range = range })
-end)
-AddEventHandler('mumble-voip:talking', function(isTalking)
-    SendNUIMessage({ action = 'voiceState', mode = isTalking and 1 or 0 })
-end)
-AddEventHandler('SaltyChat_TalkStateChanged', function(isTalking)
-    SendNUIMessage({ action = 'voiceState', mode = isTalking and 1 or 0 })
-end)
+local vs = Config.VoiceSystem
 
--- ─── /hd command ─────────────────────────────────────────────────────────────
-RegisterCommand('hd', function()
+if vs == 'auto' or vs == 'pma-voice' then
+    AddEventHandler('pma-voice:setTalkingMode', function(mode)
+        SendNUIMessage({ action = 'voiceState', mode = mode })
+    end)
+    AddEventHandler('pma-voice:proximityChanged', function(range)
+        SendNUIMessage({ action = 'voiceRange', range = range })
+    end)
+end
+
+if vs == 'auto' or vs == 'mumble-voip' then
+    AddEventHandler('mumble-voip:talking', function(isTalking)
+        SendNUIMessage({ action = 'voiceState', mode = isTalking and 1 or 0 })
+    end)
+end
+
+if vs == 'auto' or vs == 'saltychat' then
+    AddEventHandler('SaltyChat_TalkStateChanged', function(isTalking)
+        SendNUIMessage({ action = 'voiceState', mode = isTalking and 1 or 0 })
+    end)
+end
+
+-- ─── Comando impostazioni ────────────────────────────────────────────────────
+RegisterCommand(Config.SettingsCommand, function()
     SetNuiFocus(true, true)
     SendNUIMessage({ action = 'openSettings', settings = settings })
 end, false)
@@ -117,8 +143,10 @@ end)
 
 -- ─── Main update loop ────────────────────────────────────────────────────────
 Citizen.CreateThread(function()
+    local speedMult  = Config.SpeedUnit == 'mph' and 2.237 or 3.6
+
     while true do
-        Citizen.Wait(500)
+        Citizen.Wait(Config.UpdateInterval)
 
         local ped    = PlayerPedId()
         local player = PlayerId()
@@ -133,7 +161,7 @@ Citizen.CreateThread(function()
         local engineHealth, fuelLevel, seatbelt = 100, 100, false
 
         if inVehicle then
-            speed        = math.floor(GetEntitySpeed(vehicle) * 3.6)
+            speed        = math.floor(GetEntitySpeed(vehicle) * speedMult)
             gear         = GetVehicleCurrentGear(vehicle)
             rpm          = GetVehicleCurrentRpm(vehicle)
             engineHealth = math.max(0, math.floor(GetVehicleEngineHealth(vehicle) / 10))
@@ -186,13 +214,15 @@ function headingToCompass(h)
     return dirs[math.floor((h + 22.5) / 45) % 8 + 1]
 end
 
--- ─── esx_status (opzionale) ──────────────────────────────────────────────────
-AddEventHandler('esx_status:onTick', function(statuses)
-    local hunger, thirst = 100, 100
-    for _, s in ipairs(statuses) do
-        if s.name == 'hunger' then hunger = math.floor(s.percent * 100)
-        elseif s.name == 'thirst' then thirst = math.floor(s.percent * 100)
+-- ─── esx_status ──────────────────────────────────────────────────────────────
+if Config.StatusResource then
+    AddEventHandler('esx_status:onTick', function(statuses)
+        local hunger, thirst = 100, 100
+        for _, s in ipairs(statuses) do
+            if s.name == 'hunger' then hunger = math.floor(s.percent * 100)
+            elseif s.name == 'thirst' then thirst = math.floor(s.percent * 100)
+            end
         end
-    end
-    SendNUIMessage({ action = 'status', hunger = hunger, thirst = thirst })
-end)
+        SendNUIMessage({ action = 'status', hunger = hunger, thirst = thirst })
+    end)
+end

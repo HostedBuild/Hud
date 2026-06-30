@@ -15,6 +15,7 @@ files {
 
 client_scripts {
     '@es_extended/imports.lua',
+    'config.lua',
     'client/main.lua',
 }
 
