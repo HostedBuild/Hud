@@ -34,6 +34,7 @@ Citizen.CreateThread(function()
     Wait(800)
     SendNUIMessage({ action = 'loadSettings', settings = settings })
     SendNUIMessage({ action = 'show' })
+    SendNUIMessage({ action = 'playerInfo', serverId = GetPlayerServerId(PlayerId()) })
 end)
 
 AddEventHandler('esx:playerLoaded', function()

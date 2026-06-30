@@ -32,6 +32,7 @@ const DOM = {
   notifWrap: $('notif-wrap'),
   rowVoice:  $('row-voice'),
   voiceLabel: $('voice-state-label'),
+  playerIdValue: $('player-id-value'),
   // drag
   dragBanner: $('drag-banner'),
 };
@@ -576,6 +577,11 @@ window.addEventListener('message', function(e) {
       setBar(DOM.thirstBar, DOM.thirstVal, data.thirst ?? 100);
       if (state.vis.hunger) DOM.rowHunger.classList.remove('hidden');
       if (state.vis.thirst) DOM.rowThirst.classList.remove('hidden');
+      break;
+
+    case 'playerInfo':
+      if (data.serverId !== undefined)
+        DOM.playerIdValue.textContent = data.serverId;
       break;
 
     case 'notification':
