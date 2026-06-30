@@ -27,6 +27,11 @@ const DOM = {
   // cinematic
   cinTop:    $('cinematic-top'),
   cinBot:    $('cinematic-bottom'),
+  // vignette / notifications / voice
+  vignette:  $('health-vignette'),
+  notifWrap: $('notif-wrap'),
+  rowVoice:  $('row-voice'),
+  voiceLabel: $('voice-state-label'),
   // drag
   dragBanner: $('drag-banner'),
 };
@@ -127,6 +132,83 @@ function toggleEl(el, visible) {
 // ─── CINEMATIC MODE ──────────────────────────────────────────────────────────
 function setCinematic(on) {
   document.body.classList.toggle('cinematic', on);
+}
+
+// ─── HEALTH VIGNETTE ─────────────────────────────────────────────────────────
+function updateVignette(health) {
+  const v = DOM.vignette;
+  if (health > 40) {
+    v.className = '';
+  } else if (health > 20) {
+    const intensity = ((40 - health) / 40 * 0.55 + 0.1).toFixed(2);
+    v.style.setProperty('--vig-op', intensity);
+    v.className = 'low';
+  } else {
+    const intensity = Math.min(0.75, 0.45 + (20 - health) / 40).toFixed(2);
+    v.style.setProperty('--vig-op', intensity);
+    v.className = 'low critical';
+  }
+}
+
+// ─── NOTIFICATIONS ───────────────────────────────────────────────────────────
+const NOTIF_MAX = 5;
+const NOTIF_ICONS = { success: '✓', error: '✕', info: 'ℹ', warning: '⚠' };
+const NOTIF_TITLES = { success: 'Successo', error: 'Errore', info: 'Info', warning: 'Attenzione' };
+
+function addNotification(type, msg, duration) {
+  duration = duration || 4500;
+  type = ['success','error','info','warning'].includes(type) ? type : 'info';
+
+  // Trim oldest if at max
+  const existing = DOM.notifWrap.querySelectorAll('.notif');
+  if (existing.length >= NOTIF_MAX) dismissNotif(existing[existing.length - 1]);
+
+  const el = document.createElement('div');
+  el.className = `notif notif-${type}`;
+  el.innerHTML = `
+    <div class="notif-icon-wrap">${NOTIF_ICONS[type]}</div>
+    <div class="notif-body">
+      <div class="notif-title">${NOTIF_TITLES[type]}</div>
+      <div class="notif-msg">${msg}</div>
+    </div>
+    <button class="notif-close" aria-label="Chiudi">✕</button>
+    <div class="notif-progress"></div>
+  `;
+
+  DOM.notifWrap.prepend(el);
+
+  // Animate progress bar
+  const bar = el.querySelector('.notif-progress');
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    bar.style.transition = `width ${duration}ms linear`;
+    bar.style.width = '0%';
+  }));
+
+  el.querySelector('.notif-close').addEventListener('click', e => {
+    e.stopPropagation();
+    dismissNotif(el);
+  });
+  el.addEventListener('click', () => dismissNotif(el));
+
+  el._timer = setTimeout(() => dismissNotif(el), duration);
+}
+
+function dismissNotif(el) {
+  if (!el || !el.parentNode) return;
+  clearTimeout(el._timer);
+  el.classList.add('notif-out');
+  el.addEventListener('animationend', () => el.remove(), { once: true });
+}
+
+// ─── VOICE INDICATOR ─────────────────────────────────────────────────────────
+const VOICE_LABELS = { 0: '—', 1: 'PARLA', 2: 'RADIO' };
+
+function setVoiceState(mode) {
+  const row = DOM.rowVoice;
+  row.classList.remove('talking', 'radio');
+  if (mode === 1) row.classList.add('talking');
+  if (mode === 2) row.classList.add('radio');
+  DOM.voiceLabel.textContent = VOICE_LABELS[mode] || '—';
 }
 
 // ─── ICON STYLE ──────────────────────────────────────────────────────────────
@@ -496,7 +578,22 @@ window.addEventListener('message', function(e) {
       if (state.vis.thirst) DOM.rowThirst.classList.remove('hidden');
       break;
 
+    case 'notification':
+      addNotification(data.notifType || 'info', data.msg || '', data.duration);
+      break;
+
+    case 'voiceState':
+      setVoiceState(data.mode ?? 0);
+      break;
+
+    case 'voiceRange':
+      // Optional: update label with proximity range name
+      if (DOM.rowVoice.classList.contains('talking')) break;
+      DOM.voiceLabel.textContent = data.range ? `Rng ${data.range}` : '—';
+      break;
+
     case 'update': {
+      updateVignette(data.health ?? 100);
       setBar(DOM.healthBar, DOM.healthVal, data.health ?? 100);
       setBar(DOM.armorBar,  DOM.armorVal,  data.armor  ?? 0);
 

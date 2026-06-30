@@ -11,6 +11,16 @@ local settings = {
 Citizen.CreateThread(function()
     ESX = exports['es_extended']:getSharedObject()
 
+    -- Override ESX.ShowNotification to pipe into our custom NUI
+    ESX.ShowNotification = function(msg, notifType, length)
+        SendNUIMessage({
+            action   = 'notification',
+            notifType = notifType or 'info',
+            msg      = msg,
+            duration = (length or 4) * 1000,
+        })
+    end
+
     local saved = GetResourceKvpString('hud_settings')
     if saved then
         local ok, decoded = pcall(json.decode, saved)
@@ -28,12 +38,50 @@ end)
 
 AddEventHandler('esx:playerLoaded', function()
     ESX = exports['es_extended']:getSharedObject()
+    ESX.ShowNotification = function(msg, notifType, length)
+        SendNUIMessage({
+            action    = 'notification',
+            notifType = notifType or 'info',
+            msg       = msg,
+            duration  = (length or 4) * 1000,
+        })
+    end
 end)
 
 AddEventHandler('onClientResourceStart', function(resourceName)
     if GetCurrentResourceName() ~= resourceName then return end
     SetNuiFocus(false, false)
     SendNUIMessage({ action = 'show' })
+end)
+
+-- ─── Export: altri resource possono triggerare notifiche custom ──────────────
+exports('showNotification', function(msg, notifType, duration)
+    SendNUIMessage({
+        action    = 'notification',
+        notifType = notifType or 'info',
+        msg       = msg,
+        duration  = duration or 4500,
+    })
+end)
+
+-- ─── Voice activity ─────────────────────────────────────────────────────────
+-- pma-voice
+AddEventHandler('pma-voice:setTalkingMode', function(mode)
+    SendNUIMessage({ action = 'voiceState', mode = mode })
+end)
+
+AddEventHandler('pma-voice:proximityChanged', function(range)
+    SendNUIMessage({ action = 'voiceRange', range = range })
+end)
+
+-- mumble-voip
+AddEventHandler('mumble-voip:talking', function(isTalking)
+    SendNUIMessage({ action = 'voiceState', mode = isTalking and 1 or 0 })
+end)
+
+-- SaltyChat
+AddEventHandler('SaltyChat_TalkStateChanged', function(isTalking)
+    SendNUIMessage({ action = 'voiceState', mode = isTalking and 1 or 0 })
 end)
 
 -- ─── /hd command ─────────────────────────────────────────────────────────────
@@ -49,7 +97,6 @@ RegisterNUICallback('closeSettings', function(_, cb)
 end)
 
 RegisterNUICallback('enterDragMode', function(_, cb)
-    -- NUI focus stays on so the mouse cursor works for dragging
     cb('ok')
 end)
 
