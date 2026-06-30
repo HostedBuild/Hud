@@ -8,16 +8,27 @@
 </head>
 <body>
 
-<!-- ─── TOP LEFT: Clock + Zone ─── -->
-<div id="top-left">
+<!-- ─── CINEMATIC BARS ─────────────────────────────────────────────────────── -->
+<div id="cinematic-top"></div>
+<div id="cinematic-bottom"></div>
+
+<!-- ─── DRAG MODE BANNER ──────────────────────────────────────────────────── -->
+<div id="drag-banner" class="hidden">
+  <span class="drag-banner-icon">⠿</span>
+  <span>MODALITÀ TRASCINAMENTO — Sposta gli elementi HUD dove vuoi</span>
+  <button id="drag-exit-btn">✕ Esci</button>
+</div>
+
+<!-- ─── TOP LEFT: Clock + Zone ────────────────────────────────────────────── -->
+<div id="top-left" class="hud-panel draggable" data-hud="clock">
   <div id="clock-wrap">
     <div id="clock">00:00</div>
     <div id="zone-name">Los Santos</div>
   </div>
 </div>
 
-<!-- ─── TOP RIGHT: Money + Job ─── -->
-<div id="top-right">
+<!-- ─── TOP RIGHT: Money + Job ────────────────────────────────────────────── -->
+<div id="top-right" class="hud-panel draggable" data-hud="money">
   <div class="money-card">
     <span class="money-icon">💵</span>
     <div class="money-info">
@@ -29,19 +40,18 @@
     <span class="money-icon">🏦</span>
     <div class="money-info">
       <span class="money-label">Banca</span>
-      <span class="money-value" id="bank">$0</span>
+      <span class="money-value bank-val" id="bank">$0</span>
     </div>
   </div>
-  <div id="job-card">
+  <div id="job-card" data-hud="job">
     <span id="job-label">Disoccupato</span>
     <span id="job-grade"></span>
   </div>
 </div>
 
-<!-- ─── BOTTOM LEFT: Vitals ─── -->
-<div id="bottom-left">
-  <!-- Health -->
-  <div class="stat-row">
+<!-- ─── BOTTOM LEFT: Vitals ───────────────────────────────────────────────── -->
+<div id="bottom-left" class="hud-panel draggable">
+  <div class="stat-row" data-hud="health">
     <div class="stat-icon health-icon">
       <svg viewBox="0 0 24 24"><path d="M12 21.593c-5.63-5.539-11-10.297-11-14.402 0-3.791 3.068-5.191 5.281-5.191 1.312 0 4.151.501 5.719 4.457 1.59-3.968 4.464-4.447 5.726-4.447 2.54 0 5.274 1.621 5.274 5.181 0 4.069-5.136 8.625-11 14.402z"/></svg>
     </div>
@@ -51,8 +61,7 @@
     </div>
   </div>
 
-  <!-- Armor -->
-  <div class="stat-row">
+  <div class="stat-row" data-hud="armor">
     <div class="stat-icon armor-icon">
       <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
     </div>
@@ -62,8 +71,7 @@
     </div>
   </div>
 
-  <!-- Hunger -->
-  <div class="stat-row" id="row-hunger">
+  <div class="stat-row hidden" id="row-hunger" data-hud="hunger">
     <div class="stat-icon hunger-icon">
       <svg viewBox="0 0 24 24"><path d="M18.06 22.99h1.66c.84 0 1.53-.64 1.63-1.46L23 5.05h-5V1h-1.97v4.05h-4.97l.3 2.34c1.71.47 3.31 1.32 4.27 2.26 1.44 1.42 2.43 2.89 2.43 5.29v8.05zM1 21.99V21h15.03v.99c0 .55-.45 1-1.01 1H2.01c-.56 0-1.01-.45-1.01-1zm15.03-7c0-8.17-15.03-8.17-15.03 0h15.03zM1.02 17h15v2h-15z"/></svg>
     </div>
@@ -73,8 +81,7 @@
     </div>
   </div>
 
-  <!-- Thirst -->
-  <div class="stat-row" id="row-thirst">
+  <div class="stat-row hidden" id="row-thirst" data-hud="thirst">
     <div class="stat-icon thirst-icon">
       <svg viewBox="0 0 24 24"><path d="M12 2c-5.33 4.55-8 8.48-8 11.8 0 4.98 3.8 8.2 8 8.2s8-3.22 8-8.2c0-3.32-2.67-7.25-8-11.8z"/></svg>
     </div>
@@ -85,22 +92,19 @@
   </div>
 </div>
 
-<!-- ─── BOTTOM RIGHT: Vehicle / Street ─── -->
-<div id="bottom-right">
-  <!-- Street info -->
-  <div id="street-info">
+<!-- ─── BOTTOM RIGHT: Street / Compass / Speed ────────────────────────────── -->
+<div id="bottom-right" class="hud-panel draggable">
+  <div id="street-info" data-hud="street">
     <div id="street-name">Los Santos</div>
     <div id="street-zone">San Andreas</div>
   </div>
 
-  <!-- Compass -->
-  <div id="compass-wrap">
+  <div id="compass-wrap" data-hud="compass">
     <div id="compass-dir">N</div>
     <div id="compass-ring"></div>
   </div>
 
-  <!-- Speedometer (only when in vehicle) -->
-  <div id="speedometer" class="hidden">
+  <div id="speedometer" class="hidden" data-hud="speed">
     <div id="speed-value">0</div>
     <div id="speed-unit">km/h</div>
     <div id="gear-display">
@@ -108,21 +112,199 @@
       <span id="gear-val">1</span>
     </div>
     <svg id="rpm-arc" viewBox="0 0 120 120">
-      <circle class="rpm-track" cx="60" cy="60" r="50" />
+      <circle class="rpm-track" cx="60" cy="60" r="50"/>
       <circle class="rpm-fill" id="rpm-fill" cx="60" cy="60" r="50"
-        stroke-dasharray="0 314"
-        stroke-dashoffset="78.5" />
+              stroke-dasharray="0 314" stroke-dashoffset="78.5"/>
     </svg>
   </div>
 </div>
 
-<!-- ─── WANTED STARS ─── -->
-<div id="wanted-wrap" class="hidden">
+<!-- ─── WANTED STARS ──────────────────────────────────────────────────────── -->
+<div id="wanted-wrap" class="hud-panel draggable hidden" data-hud="wanted">
   <span class="star" id="s1">★</span>
   <span class="star" id="s2">★</span>
   <span class="star" id="s3">★</span>
   <span class="star" id="s4">★</span>
   <span class="star" id="s5">★</span>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SETTINGS PANEL
+════════════════════════════════════════════════════════════════════════════ -->
+<div id="settings-overlay" class="hidden">
+  <div id="settings-panel">
+
+    <!-- Header -->
+    <div class="sp-header">
+      <div class="sp-title-row">
+        <div class="sp-header-icon">⚙</div>
+        <span class="sp-title">IMPOSTAZIONI HUD</span>
+      </div>
+      <button class="sp-close-btn" id="sp-close">✕</button>
+    </div>
+
+    <!-- Tabs -->
+    <nav class="sp-tabs">
+      <button class="sp-tab active" data-tab="visibility">Visibilità</button>
+      <button class="sp-tab" data-tab="map">Mappa</button>
+      <button class="sp-tab" data-tab="style">Stile</button>
+      <button class="sp-tab" data-tab="position">Posizione</button>
+    </nav>
+
+    <!-- ── Tab: Visibilità ── -->
+    <div class="sp-tab-content active" id="tab-visibility">
+      <p class="sp-desc">Attiva o disattiva singoli elementi dell'HUD.</p>
+      <div class="sp-toggle-grid">
+        <div class="sp-toggle-item">
+          <div class="sp-t-label">
+            <span class="sp-t-icon health-c">❤</span>Salute
+          </div>
+          <label class="toggle"><input type="checkbox" id="v-health" checked><span class="track"></span></label>
+        </div>
+        <div class="sp-toggle-item">
+          <div class="sp-t-label">
+            <span class="sp-t-icon armor-c">🛡</span>Armatura
+          </div>
+          <label class="toggle"><input type="checkbox" id="v-armor" checked><span class="track"></span></label>
+        </div>
+        <div class="sp-toggle-item">
+          <div class="sp-t-label">
+            <span class="sp-t-icon hunger-c">🍔</span>Fame
+          </div>
+          <label class="toggle"><input type="checkbox" id="v-hunger" checked><span class="track"></span></label>
+        </div>
+        <div class="sp-toggle-item">
+          <div class="sp-t-label">
+            <span class="sp-t-icon thirst-c">💧</span>Sete
+          </div>
+          <label class="toggle"><input type="checkbox" id="v-thirst" checked><span class="track"></span></label>
+        </div>
+        <div class="sp-toggle-item">
+          <div class="sp-t-label">
+            <span class="sp-t-icon cash-c">💵</span>Soldi
+          </div>
+          <label class="toggle"><input type="checkbox" id="v-money" checked><span class="track"></span></label>
+        </div>
+        <div class="sp-toggle-item">
+          <div class="sp-t-label">
+            <span class="sp-t-icon job-c">💼</span>Lavoro
+          </div>
+          <label class="toggle"><input type="checkbox" id="v-job" checked><span class="track"></span></label>
+        </div>
+        <div class="sp-toggle-item">
+          <div class="sp-t-label">
+            <span class="sp-t-icon clock-c">🕐</span>Orologio
+          </div>
+          <label class="toggle"><input type="checkbox" id="v-clock" checked><span class="track"></span></label>
+        </div>
+        <div class="sp-toggle-item">
+          <div class="sp-t-label">
+            <span class="sp-t-icon compass-c">🧭</span>Bussola
+          </div>
+          <label class="toggle"><input type="checkbox" id="v-compass" checked><span class="track"></span></label>
+        </div>
+        <div class="sp-toggle-item">
+          <div class="sp-t-label">
+            <span class="sp-t-icon street-c">🗺</span>Strada
+          </div>
+          <label class="toggle"><input type="checkbox" id="v-street" checked><span class="track"></span></label>
+        </div>
+        <div class="sp-toggle-item">
+          <div class="sp-t-label">
+            <span class="sp-t-icon speed-c">🚗</span>Tachimetro
+          </div>
+          <label class="toggle"><input type="checkbox" id="v-speed" checked><span class="track"></span></label>
+        </div>
+        <div class="sp-toggle-item sp-toggle-full">
+          <div class="sp-t-label">
+            <span class="sp-t-icon wanted-c">⭐</span>Stelle ricercato
+          </div>
+          <label class="toggle"><input type="checkbox" id="v-wanted" checked><span class="track"></span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Tab: Mappa ── -->
+    <div class="sp-tab-content" id="tab-map">
+      <p class="sp-desc">Personalizza la minimappa di gioco.</p>
+
+      <div class="sp-section-label">Forma mappa</div>
+      <div class="sp-map-shape">
+        <button class="map-shape-btn active" id="shape-square">
+          <span class="shape-preview square-preview"></span>
+          <span>Quadrato</span>
+        </button>
+        <button class="map-shape-btn" id="shape-circle">
+          <span class="shape-preview circle-preview"></span>
+          <span>Cerchio</span>
+        </button>
+      </div>
+
+      <div class="sp-divider"></div>
+
+      <div class="sp-toggle-item">
+        <div class="sp-t-label">
+          <span class="sp-t-icon" style="color:#8a7fff">🗺</span>Nascondi mappa
+        </div>
+        <label class="toggle"><input type="checkbox" id="v-hideradar"><span class="track"></span></label>
+      </div>
+    </div>
+
+    <!-- ── Tab: Stile ── -->
+    <div class="sp-tab-content" id="tab-style">
+      <p class="sp-desc">Opzioni globali di visualizzazione dell'HUD.</p>
+
+      <div class="sp-style-card">
+        <div class="sp-style-info">
+          <div class="sp-style-title">Disabilita HUD</div>
+          <div class="sp-style-desc">Nasconde completamente l'HUD personalizzato e quello nativo del gioco.</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="v-huddisabled"><span class="track"></span></label>
+      </div>
+
+      <div class="sp-style-card">
+        <div class="sp-style-info">
+          <div class="sp-style-title">Modalità Cinematica</div>
+          <div class="sp-style-desc">Aggiunge barre nere sopra e sotto lo schermo, nasconde l'HUD nativo.</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="v-cinematic"><span class="track"></span></label>
+      </div>
+
+      <div class="sp-preview-cinema hidden" id="cinema-preview">
+        <div class="cp-bar"></div>
+        <div class="cp-content">Anteprima modalità cinematica</div>
+        <div class="cp-bar"></div>
+      </div>
+    </div>
+
+    <!-- ── Tab: Posizione ── -->
+    <div class="sp-tab-content" id="tab-position">
+      <p class="sp-desc">Trascina gli elementi HUD dove preferisci. Le posizioni vengono salvate automaticamente.</p>
+
+      <div class="sp-pos-info">
+        <div class="sp-pos-icon">⠿</div>
+        <div>
+          <div class="sp-pos-title">Trascinamento elementi</div>
+          <div class="sp-pos-sub">Attiva la modalità trascinamento, poi muovi ogni elemento HUD. Premi ESC o il pulsante "Esci" per terminare.</div>
+        </div>
+      </div>
+
+      <div class="sp-pos-actions">
+        <button class="sp-btn-drag" id="btn-enable-drag">
+          <span>⠿</span> Abilita Trascinamento
+        </button>
+        <button class="sp-btn-reset" id="btn-reset-pos">
+          <span>↺</span> Ripristina Posizioni
+        </button>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="sp-footer">
+      <button class="sp-btn sp-btn-cancel" id="sp-cancel">Annulla</button>
+      <button class="sp-btn sp-btn-save" id="sp-save">Salva impostazioni</button>
+    </div>
+  </div>
 </div>
 
 <script src="js/app.js"></script>
