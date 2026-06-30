@@ -134,7 +134,6 @@ Citizen.CreateThread(function()
             time      = timeStr,
             cash      = cash,      bank      = bank,
             job       = jobLabel,  grade     = jobGrade,
-            wanted    = GetPlayerWantedLevel(player),
         })
     end
 end)

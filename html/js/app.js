@@ -16,8 +16,6 @@ const DOM = {
   speedVal: $('speed-value'), gearVal: $('gear-val'), rpmFill: $('rpm-fill'),
   streetName: $('street-name'), streetZone: $('street-zone'),
   compassDir: $('compass-dir'),
-  wantedWrap: $('wanted-wrap'),
-  stars: [null, $('s1'), $('s2'), $('s3'), $('s4'), $('s5')],
   // panels
   topLeft:     $('top-left'),
   topRight:    $('top-right'),
@@ -37,7 +35,6 @@ const DOM = {
 const state = {
   hasStatus: false,
   inVehicle: false,
-  wantedLevel: 0,
 
   // persisted via localStorage
   vis: {
@@ -46,7 +43,6 @@ const state = {
     money:  true, job:   true,
     clock:  true, compass: true,
     street: true, speed: true,
-    wanted: true,
   },
   minimapCircle: false,
   hideRadar:     false,
@@ -56,7 +52,7 @@ const state = {
 };
 
 // ─── DRAGGABLE CONFIG ────────────────────────────────────────────────────────
-const DRAGGABLE_IDS = ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'wanted-wrap'];
+const DRAGGABLE_IDS = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 function setBar(bar, valEl, value, max = 100) {
@@ -76,13 +72,6 @@ function setRpm(rpm) {
   DOM.rpmFill.style.strokeDasharray = `${filled} ${RPM_CIRC}`;
 }
 
-function setWanted(level) {
-  const show = level > 0 && state.vis.wanted;
-  DOM.wantedWrap.classList.toggle('hidden', !show);
-  for (let i = 1; i <= 5; i++) {
-    DOM.stars[i].classList.toggle('active', i <= level);
-  }
-}
 
 function nuiPost(callback, data = {}) {
   return fetch(`https://hud/${callback}`, {
@@ -102,9 +91,8 @@ const VIS_MAP = {
   job:     () => $('job-card'),
   clock:   () => DOM.topLeft,
   compass: () => $('compass-wrap'),
-  street:  () => $('street-info'),
-  speed:   null, // handled differently (vehicle-gated)
-  wanted:  () => DOM.wantedWrap,
+  street: () => $('street-info'),
+  speed:  null, // handled differently (vehicle-gated)
 };
 
 function applyVisibility() {
@@ -127,8 +115,6 @@ function applyVisibility() {
   } else if (state.inVehicle) {
     DOM.speedometer.classList.remove('hidden');
   }
-  // wanted: re-evaluate
-  setWanted(state.wantedLevel);
 }
 
 function toggleEl(el, visible) {
@@ -335,7 +321,6 @@ function syncPanelToState() {
   $('v-compass').checked   = v.compass;
   $('v-street').checked    = v.street;
   $('v-speed').checked     = v.speed;
-  $('v-wanted').checked    = v.wanted;
   $('v-hideradar').checked = state.hideRadar;
   $('v-huddisabled').checked = state.hudDisabled;
   $('v-cinematic').checked   = state.cinematic;
@@ -363,8 +348,7 @@ function wireSettings() {
     'v-hunger': 'hunger', 'v-thirst': 'thirst',
     'v-money':  'money',  'v-job':    'job',
     'v-clock':  'clock',  'v-compass': 'compass',
-    'v-street': 'street', 'v-speed':   'speed',
-    'v-wanted': 'wanted',
+    'v-street': 'street', 'v-speed': 'speed',
   };
   Object.entries(visToggles).forEach(([id, key]) => {
     $(id).addEventListener('change', function() {
@@ -513,9 +497,6 @@ window.addEventListener('message', function(e) {
       } else {
         DOM.speedometer.classList.add('hidden');
       }
-
-      state.wantedLevel = data.wanted ?? 0;
-      setWanted(state.wantedLevel);
 
       // Hide hunger/thirst if no esx_status
       if (!state.hasStatus) {
