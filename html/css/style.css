@@ -651,3 +651,134 @@ input:checked + .track::before { transform: translateX(18px); background: #fff; 
   background: rgba(108,127,255,0.4);
   box-shadow: 0 0 16px rgba(108,127,255,0.3);
 }
+
+/* ════════════════════════════════════════════════════════════════
+   ICON STYLES — 5 varianti HUD
+════════════════════════════════════════════════════════════════ */
+
+/* ── Style 2: Tondo ── */
+body[data-icon-style="2"] .stat-icon {
+  border-radius: 50%;
+}
+
+/* ── Style 3: Neon ── */
+body[data-icon-style="3"] .stat-icon {
+  border-radius: 8px;
+}
+body[data-icon-style="3"] .health-icon {
+  background: rgba(0,0,0,0.35);
+  border: 1.5px solid var(--clr-health);
+  box-shadow: 0 0 10px rgba(232,76,76,0.55), inset 0 0 8px rgba(232,76,76,0.12);
+}
+body[data-icon-style="3"] .armor-icon {
+  background: rgba(0,0,0,0.35);
+  border: 1.5px solid var(--clr-armor);
+  box-shadow: 0 0 10px rgba(76,168,232,0.55), inset 0 0 8px rgba(76,168,232,0.12);
+}
+body[data-icon-style="3"] .hunger-icon {
+  background: rgba(0,0,0,0.35);
+  border: 1.5px solid var(--clr-hunger);
+  box-shadow: 0 0 10px rgba(232,168,76,0.55), inset 0 0 8px rgba(232,168,76,0.12);
+}
+body[data-icon-style="3"] .thirst-icon {
+  background: rgba(0,0,0,0.35);
+  border: 1.5px solid var(--clr-thirst);
+  box-shadow: 0 0 10px rgba(76,232,208,0.55), inset 0 0 8px rgba(76,232,208,0.12);
+}
+body[data-icon-style="3"] .stat-icon svg {
+  filter: brightness(1.4) saturate(1.2);
+}
+
+/* ── Style 4: Piatto (flat — no container) ── */
+body[data-icon-style="4"] .stat-icon {
+  background: transparent !important;
+  border-radius: 0;
+  box-shadow: none;
+  width: 22px; height: 22px;
+}
+body[data-icon-style="4"] .stat-icon svg {
+  width: 22px; height: 22px;
+}
+body[data-icon-style="4"] .health-icon svg { filter: drop-shadow(0 0 4px rgba(232,76,76,0.8)); }
+body[data-icon-style="4"] .armor-icon  svg { filter: drop-shadow(0 0 4px rgba(76,168,232,0.8)); }
+body[data-icon-style="4"] .hunger-icon svg { filter: drop-shadow(0 0 4px rgba(232,168,76,0.8)); }
+body[data-icon-style="4"] .thirst-icon svg { filter: drop-shadow(0 0 4px rgba(76,232,208,0.8)); }
+
+/* ── Style 5: Esagono ── */
+body[data-icon-style="5"] .stat-icon {
+  border-radius: 0;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   ICON STYLE SELECTOR — settings panel
+════════════════════════════════════════════════════════════════ */
+.icon-style-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.icon-style-card {
+  padding: 12px 6px 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  text-align: center;
+  cursor: pointer; pointer-events: auto;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  transition: all .2s;
+}
+.icon-style-card:hover {
+  background: rgba(255,255,255,0.08);
+}
+.icon-style-card.active {
+  background: rgba(108,127,255,0.15);
+  border-color: rgba(108,127,255,0.5);
+}
+
+.isc-preview {
+  display: flex; gap: 5px; align-items: center; justify-content: center;
+  height: 34px;
+}
+
+/* ── Base demo icon ── */
+.isc-demo {
+  width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; line-height: 1;
+}
+
+/* backgrounds shared */
+.health-icon-bg { background: rgba(232,76,76,0.25); }
+.armor-icon-bg  { background: rgba(76,168,232,0.25); }
+
+/* Style 1: Standard */
+.isc-std  { border-radius: 7px; }
+
+/* Style 2: Tondo */
+.isc-tondo { border-radius: 50%; }
+
+/* Style 3: Neon */
+.isc-neon        { background: rgba(0,0,0,0.4); border-radius: 7px; }
+.isc-neon-health { border: 1.5px solid #e84c4c; box-shadow: 0 0 8px rgba(232,76,76,0.6); }
+.isc-neon-armor  { border: 1.5px solid #4ca8e8; box-shadow: 0 0 8px rgba(76,168,232,0.6); }
+
+/* Style 4: Flat */
+.isc-flat         { background: transparent; }
+.isc-flat-health  { filter: drop-shadow(0 0 4px rgba(232,76,76,0.9)); font-size: 16px; }
+.isc-flat-armor   { filter: drop-shadow(0 0 4px rgba(76,168,232,0.9)); font-size: 16px; }
+
+/* Style 5: Esagono */
+.isc-hex {
+  border-radius: 0;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+}
+
+.isc-name {
+  font-size: 0.75rem; font-weight: 700;
+  color: var(--clr-text); letter-spacing: 0.3px;
+}
+.isc-sub {
+  font-size: 0.62rem; color: var(--clr-muted);
+}

@@ -35,6 +35,7 @@ const DOM = {
 const state = {
   hasStatus: false,
   inVehicle: false,
+  iconStyle: 1,
 
   // persisted via localStorage
   vis: {
@@ -128,6 +129,15 @@ function setCinematic(on) {
   document.body.classList.toggle('cinematic', on);
 }
 
+// ─── ICON STYLE ──────────────────────────────────────────────────────────────
+function applyIconStyle(n) {
+  state.iconStyle = n;
+  document.body.dataset.iconStyle = n;
+  document.querySelectorAll('.icon-style-card').forEach(card => {
+    card.classList.toggle('active', parseInt(card.dataset.style) === n);
+  });
+}
+
 // ─── PERSISTENCE (localStorage) ──────────────────────────────────────────────
 function saveLocal() {
   try {
@@ -137,6 +147,7 @@ function saveLocal() {
       hideRadar:     state.hideRadar,
       hudDisabled:   state.hudDisabled,
       cinematic:     state.cinematic,
+      iconStyle:     state.iconStyle,
     }));
     localStorage.setItem('hud_positions', JSON.stringify(state.positions));
   } catch (_) {}
@@ -149,6 +160,7 @@ function loadLocal() {
     const pos  = JSON.parse(localStorage.getItem('hud_positions') || '{}');
 
     Object.assign(state.vis, vis);
+    if (opts.iconStyle) state.iconStyle = opts.iconStyle;
     Object.assign(state, opts);
     state.positions = pos;
   } catch (_) {}
@@ -272,6 +284,7 @@ function openSettings(luaSettings) {
     hideRadar:     state.hideRadar,
     hudDisabled:   state.hudDisabled,
     cinematic:     state.cinematic,
+    iconStyle:     state.iconStyle,
   };
 
   syncPanelToState();
@@ -292,6 +305,7 @@ function cancelSettings() {
   state.hideRadar     = snapshot.hideRadar;
   state.hudDisabled   = snapshot.hudDisabled;
   state.cinematic     = snapshot.cinematic;
+  applyIconStyle(snapshot.iconStyle);
 
   applyVisibility();
   setCinematic(state.cinematic);
@@ -328,6 +342,7 @@ function syncPanelToState() {
   $('shape-square').classList.toggle('active', !state.minimapCircle);
   $('shape-circle').classList.toggle('active',  state.minimapCircle);
   $('cinema-preview').classList.toggle('hidden', !state.cinematic);
+  applyIconStyle(state.iconStyle);
 }
 
 // ─── PANEL EVENT WIRING ──────────────────────────────────────────────────────
@@ -404,6 +419,13 @@ function wireSettings() {
   });
 
   $('btn-reset-pos').addEventListener('click', resetPositions);
+
+  // Icon style cards — instant preview
+  document.querySelectorAll('.icon-style-card').forEach(card => {
+    card.addEventListener('click', function() {
+      applyIconStyle(parseInt(this.dataset.style));
+    });
+  });
 
   // Close / save / cancel
   $('sp-close').addEventListener('click',  cancelSettings);
@@ -512,6 +534,7 @@ window.addEventListener('message', function(e) {
 loadLocal();
 applyVisibility();
 setCinematic(state.cinematic);
+applyIconStyle(state.iconStyle);
 restorePositions();
 wireSettings();
 
