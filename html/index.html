@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HUD</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<!-- ─── TOP LEFT: Clock + Zone ─── -->
+<div id="top-left">
+  <div id="clock-wrap">
+    <div id="clock">00:00</div>
+    <div id="zone-name">Los Santos</div>
+  </div>
+</div>
+
+<!-- ─── TOP RIGHT: Money + Job ─── -->
+<div id="top-right">
+  <div class="money-card">
+    <span class="money-icon">💵</span>
+    <div class="money-info">
+      <span class="money-label">Contanti</span>
+      <span class="money-value" id="cash">$0</span>
+    </div>
+  </div>
+  <div class="money-card">
+    <span class="money-icon">🏦</span>
+    <div class="money-info">
+      <span class="money-label">Banca</span>
+      <span class="money-value" id="bank">$0</span>
+    </div>
+  </div>
+  <div id="job-card">
+    <span id="job-label">Disoccupato</span>
+    <span id="job-grade"></span>
+  </div>
+</div>
+
+<!-- ─── BOTTOM LEFT: Vitals ─── -->
+<div id="bottom-left">
+  <!-- Health -->
+  <div class="stat-row">
+    <div class="stat-icon health-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 21.593c-5.63-5.539-11-10.297-11-14.402 0-3.791 3.068-5.191 5.281-5.191 1.312 0 4.151.501 5.719 4.457 1.59-3.968 4.464-4.447 5.726-4.447 2.54 0 5.274 1.621 5.274 5.181 0 4.069-5.136 8.625-11 14.402z"/></svg>
+    </div>
+    <div class="stat-bar-wrap">
+      <div class="stat-header"><span class="stat-name">Salute</span><span class="stat-val" id="health-val">100</span></div>
+      <div class="bar-track"><div class="bar-fill health-fill" id="health-bar" style="width:100%"></div></div>
+    </div>
+  </div>
+
+  <!-- Armor -->
+  <div class="stat-row">
+    <div class="stat-icon armor-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+    </div>
+    <div class="stat-bar-wrap">
+      <div class="stat-header"><span class="stat-name">Armatura</span><span class="stat-val" id="armor-val">0</span></div>
+      <div class="bar-track"><div class="bar-fill armor-fill" id="armor-bar" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <!-- Hunger -->
+  <div class="stat-row" id="row-hunger">
+    <div class="stat-icon hunger-icon">
+      <svg viewBox="0 0 24 24"><path d="M18.06 22.99h1.66c.84 0 1.53-.64 1.63-1.46L23 5.05h-5V1h-1.97v4.05h-4.97l.3 2.34c1.71.47 3.31 1.32 4.27 2.26 1.44 1.42 2.43 2.89 2.43 5.29v8.05zM1 21.99V21h15.03v.99c0 .55-.45 1-1.01 1H2.01c-.56 0-1.01-.45-1.01-1zm15.03-7c0-8.17-15.03-8.17-15.03 0h15.03zM1.02 17h15v2h-15z"/></svg>
+    </div>
+    <div class="stat-bar-wrap">
+      <div class="stat-header"><span class="stat-name">Fame</span><span class="stat-val" id="hunger-val">100</span></div>
+      <div class="bar-track"><div class="bar-fill hunger-fill" id="hunger-bar" style="width:100%"></div></div>
+    </div>
+  </div>
+
+  <!-- Thirst -->
+  <div class="stat-row" id="row-thirst">
+    <div class="stat-icon thirst-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 2c-5.33 4.55-8 8.48-8 11.8 0 4.98 3.8 8.2 8 8.2s8-3.22 8-8.2c0-3.32-2.67-7.25-8-11.8z"/></svg>
+    </div>
+    <div class="stat-bar-wrap">
+      <div class="stat-header"><span class="stat-name">Sete</span><span class="stat-val" id="thirst-val">100</span></div>
+      <div class="bar-track"><div class="bar-fill thirst-fill" id="thirst-bar" style="width:100%"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── BOTTOM RIGHT: Vehicle / Street ─── -->
+<div id="bottom-right">
+  <!-- Street info -->
+  <div id="street-info">
+    <div id="street-name">Los Santos</div>
+    <div id="street-zone">San Andreas</div>
+  </div>
+
+  <!-- Compass -->
+  <div id="compass-wrap">
+    <div id="compass-dir">N</div>
+    <div id="compass-ring"></div>
+  </div>
+
+  <!-- Speedometer (only when in vehicle) -->
+  <div id="speedometer" class="hidden">
+    <div id="speed-value">0</div>
+    <div id="speed-unit">km/h</div>
+    <div id="gear-display">
+      <span class="gear-label">GEAR</span>
+      <span id="gear-val">1</span>
+    </div>
+    <svg id="rpm-arc" viewBox="0 0 120 120">
+      <circle class="rpm-track" cx="60" cy="60" r="50" />
+      <circle class="rpm-fill" id="rpm-fill" cx="60" cy="60" r="50"
+        stroke-dasharray="0 314"
+        stroke-dashoffset="78.5" />
+    </svg>
+  </div>
+</div>
+
+<!-- ─── WANTED STARS ─── -->
+<div id="wanted-wrap" class="hidden">
+  <span class="star" id="s1">★</span>
+  <span class="star" id="s2">★</span>
+  <span class="star" id="s3">★</span>
+  <span class="star" id="s4">★</span>
+  <span class="star" id="s5">★</span>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>

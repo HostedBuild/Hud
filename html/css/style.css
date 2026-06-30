@@ -1,0 +1,430 @@
+/* ════════════════════════════════════════════
+   BASE RESET & FONT
+════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;600;700&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100vw; height: 100vh;
+  overflow: hidden;
+  background: transparent;
+  font-family: 'Exo 2', sans-serif;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* ════════════════════════════════════════════
+   CSS CUSTOM PROPERTIES
+════════════════════════════════════════════ */
+:root {
+  --clr-bg:       rgba(10, 12, 18, 0.82);
+  --clr-bg-light: rgba(20, 24, 36, 0.75);
+  --clr-border:   rgba(255,255,255,0.08);
+  --clr-text:     #e8eaf0;
+  --clr-muted:    rgba(200,210,230,0.55);
+
+  --clr-health:   #e84c4c;
+  --clr-armor:    #4ca8e8;
+  --clr-hunger:   #e8a84c;
+  --clr-thirst:   #4ce8d0;
+  --clr-cash:     #4ce884;
+  --clr-bank:     #8a7fff;
+  --clr-rpm:      #e84c4c;
+
+  --radius:       10px;
+  --panel-pad:    14px 16px;
+  --shadow:       0 4px 24px rgba(0,0,0,0.45);
+  --glow-health:  0 0 10px rgba(232,76,76,0.5);
+  --glow-armor:   0 0 10px rgba(76,168,232,0.5);
+  --glow-hunger:  0 0 10px rgba(232,168,76,0.5);
+  --glow-thirst:  0 0 10px rgba(76,232,208,0.5);
+  --glow-cash:    0 0 12px rgba(76,232,132,0.4);
+}
+
+/* ════════════════════════════════════════════
+   UTILITY
+════════════════════════════════════════════ */
+.hidden { display: none !important; }
+
+.panel {
+  background: var(--clr-bg);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--shadow);
+  padding: var(--panel-pad);
+}
+
+/* ════════════════════════════════════════════
+   TOP LEFT — CLOCK / ZONE
+════════════════════════════════════════════ */
+#top-left {
+  position: fixed; top: 20px; left: 20px;
+  display: flex; align-items: center; gap: 12px;
+}
+
+#clock-wrap {
+  background: var(--clr-bg);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow);
+  padding: 10px 18px;
+  text-align: center;
+}
+
+#clock {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 2.4rem;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--clr-text);
+  line-height: 1;
+  text-shadow: 0 0 14px rgba(130,160,255,0.4);
+}
+
+#zone-name {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--clr-muted);
+  margin-top: 2px;
+}
+
+/* ════════════════════════════════════════════
+   TOP RIGHT — MONEY / JOB
+════════════════════════════════════════════ */
+#top-right {
+  position: fixed; top: 20px; right: 20px;
+  display: flex; flex-direction: column; gap: 8px;
+  align-items: flex-end;
+}
+
+.money-card {
+  background: var(--clr-bg);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow);
+  padding: 8px 14px;
+  display: flex; align-items: center; gap: 10px;
+  min-width: 160px;
+}
+
+.money-icon { font-size: 1.2rem; line-height: 1; }
+
+.money-info {
+  display: flex; flex-direction: column;
+  gap: 1px;
+}
+
+.money-label {
+  font-size: 0.65rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 1.5px;
+  color: var(--clr-muted);
+}
+
+.money-value {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 1.15rem; font-weight: 700;
+  color: var(--clr-cash);
+  text-shadow: var(--glow-cash);
+  letter-spacing: 1px;
+}
+
+#bank .money-value,
+.money-card:nth-child(2) .money-value { color: var(--clr-bank); text-shadow: 0 0 12px rgba(138,127,255,0.4); }
+
+#job-card {
+  background: var(--clr-bg);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow);
+  padding: 7px 14px;
+  min-width: 160px;
+  display: flex; flex-direction: column;
+}
+
+#job-label {
+  font-size: 0.85rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1px;
+  color: var(--clr-text);
+}
+
+#job-grade {
+  font-size: 0.7rem; font-weight: 400;
+  color: var(--clr-muted); letter-spacing: 0.5px;
+}
+
+/* ════════════════════════════════════════════
+   BOTTOM LEFT — VITALS
+════════════════════════════════════════════ */
+#bottom-left {
+  position: fixed; bottom: 24px; left: 20px;
+  display: flex; flex-direction: column; gap: 6px;
+  width: 240px;
+}
+
+.stat-row {
+  background: var(--clr-bg);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow);
+  padding: 8px 12px;
+  display: flex; align-items: center; gap: 10px;
+}
+
+.stat-icon {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat-icon svg { width: 15px; height: 15px; }
+
+.health-icon { background: rgba(232,76,76,0.2); }
+.health-icon svg { fill: var(--clr-health); }
+
+.armor-icon { background: rgba(76,168,232,0.2); }
+.armor-icon svg { fill: var(--clr-armor); }
+
+.hunger-icon { background: rgba(232,168,76,0.2); }
+.hunger-icon svg { fill: var(--clr-hunger); }
+
+.thirst-icon { background: rgba(76,232,208,0.2); }
+.thirst-icon svg { fill: var(--clr-thirst); }
+
+.stat-bar-wrap { flex: 1; min-width: 0; }
+
+.stat-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 5px;
+}
+
+.stat-name {
+  font-size: 0.65rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1.5px;
+  color: var(--clr-muted);
+}
+
+.stat-val {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 0.85rem; font-weight: 700;
+  color: var(--clr-text);
+}
+
+.bar-track {
+  width: 100%; height: 5px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 99px; overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%; border-radius: 99px;
+  transition: width 0.4s cubic-bezier(0.4,0,0.2,1),
+              background-color 0.4s ease;
+}
+
+.health-fill { background: var(--clr-health); box-shadow: 0 0 6px rgba(232,76,76,0.6); }
+.armor-fill  { background: var(--clr-armor);  box-shadow: 0 0 6px rgba(76,168,232,0.6); }
+.hunger-fill { background: var(--clr-hunger); box-shadow: 0 0 6px rgba(232,168,76,0.6); }
+.thirst-fill { background: var(--clr-thirst); box-shadow: 0 0 6px rgba(76,232,208,0.6); }
+
+/* Low-value warning pulse */
+.bar-fill.low { animation: bar-pulse 1s ease-in-out infinite; }
+@keyframes bar-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
+
+/* ════════════════════════════════════════════
+   BOTTOM RIGHT — STREET / COMPASS / SPEEDOMETER
+════════════════════════════════════════════ */
+#bottom-right {
+  position: fixed; bottom: 24px; right: 20px;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+  width: 200px;
+}
+
+/* Street info */
+#street-info {
+  background: var(--clr-bg);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow);
+  padding: 8px 14px;
+  text-align: right; width: 100%;
+}
+
+#street-name {
+  font-size: 0.88rem; font-weight: 700;
+  color: var(--clr-text); letter-spacing: 0.5px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+#street-zone {
+  font-size: 0.65rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 1.5px;
+  color: var(--clr-muted);
+}
+
+/* Compass */
+#compass-wrap {
+  position: relative;
+  width: 54px; height: 54px;
+  display: flex; align-items: center; justify-content: center;
+  align-self: flex-end;
+}
+
+#compass-ring {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--clr-border);
+  background: var(--clr-bg);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow);
+}
+
+#compass-dir {
+  position: relative; z-index: 1;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 1.3rem; font-weight: 700;
+  color: var(--clr-text);
+  text-shadow: 0 0 12px rgba(130,160,255,0.6);
+}
+
+/* Speedometer */
+#speedometer {
+  position: relative;
+  width: 140px; height: 140px;
+  align-self: flex-end;
+}
+
+#rpm-arc {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  transform: rotate(-90deg);
+}
+
+.rpm-track {
+  fill: none;
+  stroke: rgba(255,255,255,0.06);
+  stroke-width: 8;
+}
+
+.rpm-fill {
+  fill: none;
+  stroke: var(--clr-rpm);
+  stroke-width: 8;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 6px rgba(232,76,76,0.7));
+  transition: stroke-dasharray 0.3s ease;
+}
+
+#speed-value {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -58%);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 2.4rem; font-weight: 700;
+  color: var(--clr-text);
+  line-height: 1;
+  text-align: center;
+  text-shadow: 0 0 14px rgba(130,160,255,0.4);
+}
+
+#speed-unit {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, 20%);
+  font-size: 0.6rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 2px;
+  color: var(--clr-muted);
+}
+
+#gear-display {
+  position: absolute;
+  bottom: 22px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+}
+
+.gear-label {
+  font-size: 0.55rem; font-weight: 700;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--clr-muted);
+}
+
+#gear-val {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 1.2rem; font-weight: 700;
+  color: var(--clr-text);
+}
+
+/* Speedometer panel background */
+#speedometer::before {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  background: var(--clr-bg);
+  border: 1px solid var(--clr-border);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow);
+}
+
+/* ════════════════════════════════════════════
+   WANTED STARS
+════════════════════════════════════════════ */
+#wanted-wrap {
+  position: fixed;
+  top: 50%; right: 20px;
+  transform: translateY(-50%);
+  display: flex; flex-direction: column; gap: 4px;
+  background: var(--clr-bg);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow);
+  padding: 10px 10px;
+}
+
+.star {
+  font-size: 1.3rem;
+  color: rgba(255,255,255,0.15);
+  transition: color 0.3s ease, text-shadow 0.3s ease;
+  line-height: 1;
+}
+
+.star.active {
+  color: #ffd700;
+  text-shadow: 0 0 10px rgba(255,215,0,0.7);
+  animation: star-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes star-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+
+/* ════════════════════════════════════════════
+   TRANSITIONS / FADE IN
+════════════════════════════════════════════ */
+#top-left, #top-right, #bottom-left, #bottom-right, #wanted-wrap {
+  opacity: 0;
+  animation: fade-in 0.6s ease forwards;
+}
+#top-left    { animation-delay: 0.1s; }
+#top-right   { animation-delay: 0.2s; }
+#bottom-left { animation-delay: 0.3s; }
+#bottom-right{ animation-delay: 0.4s; }
+
+@keyframes fade-in {
+  to { opacity: 1; }
+}
