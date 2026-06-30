@@ -16,6 +16,12 @@ const DOM = {
   speedVal: $('speed-value'), gearVal: $('gear-val'), rpmFill: $('rpm-fill'),
   streetName: $('street-name'), streetZone: $('street-zone'),
   compassDir: $('compass-dir'),
+  // vehicle status
+  vehicleStatus: $('vehicle-status'),
+  engineBar: $('engine-bar'), engineVal: $('engine-val'),
+  fuelBar:   $('fuel-bar'),   fuelVal:   $('fuel-val'),
+  seatbeltRow:   $('vrow-seatbelt'),
+  seatbeltLabel: $('seatbelt-label'),
   // panels
   topLeft:     $('top-left'),
   topRight:    $('top-right'),
@@ -42,6 +48,7 @@ const state = {
   hasStatus: false,
   inVehicle: false,
   iconStyle: 1,
+  theme: 'indaco',
 
   // persisted via localStorage
   vis: {
@@ -55,17 +62,43 @@ const state = {
   hideRadar:     false,
   hudDisabled:   false,
   cinematic:     false,
-  positions:     {},   // { 'top-left': { top: '20px', left: '20px' }, ... }
+  positions:     {},
 };
 
 // ─── DRAGGABLE CONFIG ────────────────────────────────────────────────────────
 const DRAGGABLE_IDS = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
 
+// ─── THEMES ──────────────────────────────────────────────────────────────────
+const THEMES = {
+  indaco: { hex: '#6c7fff', rgb: '108,127,255' },
+  rosso:  { hex: '#ff4c6c', rgb: '255,76,108'  },
+  verde:  { hex: '#4ce884', rgb: '76,232,132'  },
+  viola:  { hex: '#b44cff', rgb: '180,76,255'  },
+  oro:    { hex: '#ffcc4c', rgb: '255,204,76'  },
+  ciano:  { hex: '#4ce8d0', rgb: '76,232,208'  },
+};
+
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
+
+function animateCount(el, to, duration = 280, fmt = v => String(Math.round(v))) {
+  const from = parseFloat(el.dataset.rawVal) || 0;
+  el.dataset.rawVal = to;
+  if (from === to) return;
+  const start = performance.now();
+  function tick(now) {
+    const t = Math.min(1, (now - start) / duration);
+    const ease = 1 - Math.pow(1 - t, 3); // ease-out-cubic
+    el.textContent = fmt(from + (to - from) * ease);
+    if (t < 1) requestAnimationFrame(tick);
+    else el.textContent = fmt(to);
+  }
+  requestAnimationFrame(tick);
+}
+
 function setBar(bar, valEl, value, max = 100) {
   const pct = Math.min(100, Math.max(0, (value / max) * 100));
-  bar.style.width  = pct + '%';
-  valEl.textContent = value;
+  bar.style.width = pct + '%';
+  animateCount(valEl, value);
   bar.classList.toggle('low', pct <= 25);
 }
 
@@ -79,7 +112,6 @@ function setRpm(rpm) {
   DOM.rpmFill.style.strokeDasharray = `${filled} ${RPM_CIRC}`;
 }
 
-
 function nuiPost(callback, data = {}) {
   return fetch(`https://hud/${callback}`, {
     method: 'POST',
@@ -88,20 +120,28 @@ function nuiPost(callback, data = {}) {
   }).catch(() => {});
 }
 
-// ─── VISIBILITY APPLY ────────────────────────────────────────────────────────
-const VIS_MAP = {
-  health:  el => $('health').closest ? document.querySelector('[data-hud="health"]') : document.querySelector('.stat-row[data-hud="health"]'),
-  armor:   () => document.querySelector('.stat-row[data-hud="armor"]'),
-  hunger:  () => DOM.rowHunger,
-  thirst:  () => DOM.rowThirst,
-  money:   () => DOM.topRight,
-  job:     () => $('job-card'),
-  clock:   () => DOM.topLeft,
-  compass: () => $('compass-wrap'),
-  street: () => $('street-info'),
-  speed:  null, // handled differently (vehicle-gated)
-};
+// ─── THEME ───────────────────────────────────────────────────────────────────
+function applyTheme(key) {
+  const t = THEMES[key] || THEMES.indaco;
+  state.theme = key;
+  document.documentElement.style.setProperty('--clr-accent', t.hex);
+  document.documentElement.style.setProperty('--clr-accent-rgb', t.rgb);
+  document.querySelectorAll('.theme-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.theme === key);
+  });
+}
 
+// ─── ENGINE BAR (dynamic colour) ─────────────────────────────────────────────
+function updateEngineBar(val) {
+  const pct = Math.min(100, Math.max(0, val));
+  DOM.engineBar.style.width = pct + '%';
+  const clr = val > 70 ? 'var(--clr-cash)' : val > 40 ? 'var(--clr-hunger)' : 'var(--clr-health)';
+  DOM.engineBar.style.setProperty('--clr-engine', clr);
+  DOM.engineBar.classList.toggle('low', pct <= 25);
+  animateCount(DOM.engineVal, val);
+}
+
+// ─── VISIBILITY APPLY ────────────────────────────────────────────────────────
 function applyVisibility() {
   const v = state.vis;
 
@@ -116,7 +156,6 @@ function applyVisibility() {
   toggleEl(DOM.topLeft,   v.clock);
   toggleEl($('compass-wrap'), v.compass);
   toggleEl($('street-info'),  v.street);
-  // speed: only visible when in vehicle AND vis.speed is on
   if (!v.speed) {
     DOM.speedometer.classList.add('hidden');
   } else if (state.inVehicle) {
@@ -153,14 +192,13 @@ function updateVignette(health) {
 
 // ─── NOTIFICATIONS ───────────────────────────────────────────────────────────
 const NOTIF_MAX = 5;
-const NOTIF_ICONS = { success: '✓', error: '✕', info: 'ℹ', warning: '⚠' };
+const NOTIF_ICONS  = { success: '✓', error: '✕', info: 'ℹ', warning: '⚠' };
 const NOTIF_TITLES = { success: 'Successo', error: 'Errore', info: 'Info', warning: 'Attenzione' };
 
 function addNotification(type, msg, duration) {
   duration = duration || 4500;
   type = ['success','error','info','warning'].includes(type) ? type : 'info';
 
-  // Trim oldest if at max
   const existing = DOM.notifWrap.querySelectorAll('.notif');
   if (existing.length >= NOTIF_MAX) dismissNotif(existing[existing.length - 1]);
 
@@ -178,7 +216,6 @@ function addNotification(type, msg, duration) {
 
   DOM.notifWrap.prepend(el);
 
-  // Animate progress bar
   const bar = el.querySelector('.notif-progress');
   requestAnimationFrame(() => requestAnimationFrame(() => {
     bar.style.transition = `width ${duration}ms linear`;
@@ -190,7 +227,6 @@ function addNotification(type, msg, duration) {
     dismissNotif(el);
   });
   el.addEventListener('click', () => dismissNotif(el));
-
   el._timer = setTimeout(() => dismissNotif(el), duration);
 }
 
@@ -224,13 +260,14 @@ function applyIconStyle(n) {
 // ─── PERSISTENCE (localStorage) ──────────────────────────────────────────────
 function saveLocal() {
   try {
-    localStorage.setItem('hud_vis',       JSON.stringify(state.vis));
-    localStorage.setItem('hud_options',   JSON.stringify({
+    localStorage.setItem('hud_vis', JSON.stringify(state.vis));
+    localStorage.setItem('hud_options', JSON.stringify({
       minimapCircle: state.minimapCircle,
       hideRadar:     state.hideRadar,
       hudDisabled:   state.hudDisabled,
       cinematic:     state.cinematic,
       iconStyle:     state.iconStyle,
+      theme:         state.theme,
     }));
     localStorage.setItem('hud_positions', JSON.stringify(state.positions));
   } catch (_) {}
@@ -238,14 +275,15 @@ function saveLocal() {
 
 function loadLocal() {
   try {
-    const vis  = JSON.parse(localStorage.getItem('hud_vis')     || '{}');
-    const opts = JSON.parse(localStorage.getItem('hud_options') || '{}');
+    const vis  = JSON.parse(localStorage.getItem('hud_vis')       || '{}');
+    const opts = JSON.parse(localStorage.getItem('hud_options')   || '{}');
     const pos  = JSON.parse(localStorage.getItem('hud_positions') || '{}');
 
     Object.assign(state.vis, vis);
     if (opts.iconStyle) state.iconStyle = opts.iconStyle;
     Object.assign(state, opts);
     state.positions = pos;
+    if (opts.theme) applyTheme(opts.theme);
   } catch (_) {}
 }
 
@@ -266,10 +304,7 @@ function resetPositions() {
   state.positions = {};
   DRAGGABLE_IDS.forEach(id => {
     const el = $(id); if (!el) return;
-    el.style.top    = '';
-    el.style.left   = '';
-    el.style.bottom = '';
-    el.style.right  = '';
+    el.style.top = el.style.left = el.style.bottom = el.style.right = '';
   });
   saveLocal();
 }
@@ -286,7 +321,6 @@ function enableDragMode() {
   DRAGGABLE_IDS.forEach(id => {
     const el = $(id); if (!el) return;
 
-    // Convert to top/left positioning so we can track movement uniformly
     const rect = el.getBoundingClientRect();
     el.style.position = 'fixed';
     el.style.top      = rect.top  + 'px';
@@ -296,15 +330,12 @@ function enableDragMode() {
 
     const onDown = function(e) {
       if (!dragModeActive) return;
-      e.preventDefault();
-      e.stopPropagation();
+      e.preventDefault(); e.stopPropagation();
 
-      const startX    = e.clientX;
-      const startY    = e.clientY;
+      const startX = e.clientX, startY = e.clientY;
       const startLeft = parseFloat(el.style.left) || 0;
       const startTop  = parseFloat(el.style.top)  || 0;
-      const elW = el.offsetWidth;
-      const elH = el.offsetHeight;
+      const elW = el.offsetWidth, elH = el.offsetHeight;
 
       function onMove(e) {
         let newLeft = startLeft + (e.clientX - startX);
@@ -318,7 +349,6 @@ function enableDragMode() {
       function onUp() {
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup',   onUp);
-        // Save position
         state.positions[id] = { top: el.style.top, left: el.style.left };
         saveLocal();
       }
@@ -338,21 +368,16 @@ function disableDragMode() {
   dragModeActive = false;
   document.body.classList.remove('drag-mode');
   DOM.dragBanner.classList.add('hidden');
-
   dragCleanup.forEach(fn => fn());
   dragCleanup.clear();
-
   nuiPost('exitDragMode');
 }
 
 // ─── SETTINGS PANEL ──────────────────────────────────────────────────────────
 let settingsOpen = false;
-
-// Saved snapshot for "Cancel"
 let snapshot = {};
 
 function openSettings(luaSettings) {
-  // Sync with Lua-side settings if provided
   if (luaSettings) {
     state.minimapCircle = luaSettings.minimapCircle || false;
     state.hideRadar     = luaSettings.hideRadar     || false;
@@ -360,7 +385,6 @@ function openSettings(luaSettings) {
     state.cinematic     = luaSettings.cinematicMode || false;
   }
 
-  // Snapshot for cancel
   snapshot = {
     vis: { ...state.vis },
     minimapCircle: state.minimapCircle,
@@ -368,6 +392,7 @@ function openSettings(luaSettings) {
     hudDisabled:   state.hudDisabled,
     cinematic:     state.cinematic,
     iconStyle:     state.iconStyle,
+    theme:         state.theme,
   };
 
   syncPanelToState();
@@ -382,13 +407,13 @@ function closeSettings() {
 }
 
 function cancelSettings() {
-  // Restore snapshot
   Object.assign(state.vis, snapshot.vis);
   state.minimapCircle = snapshot.minimapCircle;
   state.hideRadar     = snapshot.hideRadar;
   state.hudDisabled   = snapshot.hudDisabled;
   state.cinematic     = snapshot.cinematic;
   applyIconStyle(snapshot.iconStyle);
+  applyTheme(snapshot.theme);
 
   applyVisibility();
   setCinematic(state.cinematic);
@@ -418,14 +443,16 @@ function syncPanelToState() {
   $('v-compass').checked   = v.compass;
   $('v-street').checked    = v.street;
   $('v-speed').checked     = v.speed;
-  $('v-hideradar').checked = state.hideRadar;
+  $('v-hideradar').checked   = state.hideRadar;
   $('v-huddisabled').checked = state.hudDisabled;
   $('v-cinematic').checked   = state.cinematic;
 
   $('shape-square').classList.toggle('active', !state.minimapCircle);
   $('shape-circle').classList.toggle('active',  state.minimapCircle);
   $('cinema-preview').classList.toggle('hidden', !state.cinematic);
+
   applyIconStyle(state.iconStyle);
+  applyTheme(state.theme);
 }
 
 // ─── PANEL EVENT WIRING ──────────────────────────────────────────────────────
@@ -440,7 +467,7 @@ function wireSettings() {
     });
   });
 
-  // Visibility toggles — instant preview
+  // Visibility toggles
   const visToggles = {
     'v-health': 'health', 'v-armor': 'armor',
     'v-hunger': 'hunger', 'v-thirst': 'thirst',
@@ -455,24 +482,20 @@ function wireSettings() {
     });
   });
 
-  // Hide radar toggle
   $('v-hideradar').addEventListener('change', function() {
     state.hideRadar = this.checked;
   });
 
-  // Disable HUD
   $('v-huddisabled').addEventListener('change', function() {
     state.hudDisabled = this.checked;
   });
 
-  // Cinematic — instant preview
   $('v-cinematic').addEventListener('change', function() {
     state.cinematic = this.checked;
     setCinematic(state.cinematic);
     $('cinema-preview').classList.toggle('hidden', !state.cinematic);
   });
 
-  // Map shape
   $('shape-square').addEventListener('click', function() {
     state.minimapCircle = false;
     $('shape-square').classList.add('active');
@@ -494,19 +517,24 @@ function wireSettings() {
       enableDragMode();
       this.classList.add('active');
       this.textContent = '✓  Trascinamento Attivo';
-      // Close settings so the user can drag
       DOM.overlay.classList.add('hidden');
       settingsOpen = false;
-      // Don't call closeSettings() — keeps NUI focus for dragging
     }
   });
 
   $('btn-reset-pos').addEventListener('click', resetPositions);
 
-  // Icon style cards — instant preview
+  // Icon style cards
   document.querySelectorAll('.icon-style-card').forEach(card => {
     card.addEventListener('click', function() {
       applyIconStyle(parseInt(this.dataset.style));
+    });
+  });
+
+  // Theme buttons — instant preview
+  document.querySelectorAll('.theme-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      applyTheme(this.dataset.theme);
     });
   });
 
@@ -515,14 +543,12 @@ function wireSettings() {
   $('sp-cancel').addEventListener('click', cancelSettings);
   $('sp-save').addEventListener('click',   saveSettings);
 
-  // Drag exit banner
   $('drag-exit-btn').addEventListener('click', function() {
     disableDragMode();
     $('btn-enable-drag').classList.remove('active');
     $('btn-enable-drag').innerHTML = '<span>⠿</span> Abilita Trascinamento';
   });
 
-  // ESC to close
   window.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
       if (dragModeActive) {
@@ -535,7 +561,6 @@ function wireSettings() {
     }
   });
 
-  // Click overlay backdrop to cancel
   DOM.overlay.addEventListener('click', function(e) {
     if (e.target === DOM.overlay) cancelSettings();
   });
@@ -561,7 +586,6 @@ window.addEventListener('message', function(e) {
       break;
 
     case 'loadSettings':
-      // Apply Lua-saved settings on resource start
       if (data.settings) {
         state.minimapCircle = data.settings.minimapCircle || false;
         state.hideRadar     = data.settings.hideRadar     || false;
@@ -593,7 +617,6 @@ window.addEventListener('message', function(e) {
       break;
 
     case 'voiceRange':
-      // Optional: update label with proximity range name
       if (DOM.rowVoice.classList.contains('talking')) break;
       DOM.voiceLabel.textContent = data.range ? `Rng ${data.range}` : '—';
       break;
@@ -603,11 +626,15 @@ window.addEventListener('message', function(e) {
       setBar(DOM.healthBar, DOM.healthVal, data.health ?? 100);
       setBar(DOM.armorBar,  DOM.armorVal,  data.armor  ?? 0);
 
-      if (data.time)   DOM.clock.textContent     = data.time;
-      if (data.zone)   DOM.zone.textContent       = data.zone;
-      if (data.cash  !== undefined) DOM.cash.textContent     = formatMoney(data.cash);
-      if (data.bank  !== undefined) DOM.bank.textContent     = formatMoney(data.bank);
-      if (data.job   !== undefined) DOM.jobLabel.textContent = data.job || 'Disoccupato';
+      if (data.time)  DOM.clock.textContent = data.time;
+      if (data.zone)  DOM.zone.textContent  = data.zone;
+
+      if (data.cash !== undefined)
+        animateCount(DOM.cash, data.cash, 400, v => formatMoney(Math.round(v)));
+      if (data.bank !== undefined)
+        animateCount(DOM.bank, data.bank, 400, v => formatMoney(Math.round(v)));
+
+      if (data.job   !== undefined) DOM.jobLabel.textContent = data.job   || 'Disoccupato';
       if (data.grade !== undefined) DOM.jobGrade.textContent = data.grade || '';
       if (data.street)  DOM.streetName.textContent = data.street;
       if (data.zone)    DOM.streetZone.textContent = data.zone;
@@ -616,14 +643,27 @@ window.addEventListener('message', function(e) {
       state.inVehicle = !!data.inVehicle;
       if (data.inVehicle && state.vis.speed) {
         DOM.speedometer.classList.remove('hidden');
-        DOM.speedVal.textContent = data.speed ?? 0;
-        DOM.gearVal.textContent  = data.gear  ?? 1;
+        animateCount(DOM.speedVal, data.speed ?? 0);
+        DOM.gearVal.textContent = data.gear ?? 1;
         setRpm(data.rpm ?? 0);
       } else {
         DOM.speedometer.classList.add('hidden');
       }
 
-      // Hide hunger/thirst if no esx_status
+      // Vehicle status panel (engine / fuel / seatbelt)
+      if (data.inVehicle) {
+        DOM.vehicleStatus.classList.remove('hidden');
+        updateEngineBar(data.engineHealth ?? 100);
+        setBar(DOM.fuelBar, DOM.fuelVal, data.fuelLevel ?? 100);
+
+        const belted = !!data.seatbelt;
+        DOM.seatbeltRow.classList.toggle('belted',   belted);
+        DOM.seatbeltRow.classList.toggle('unbelted', !belted);
+        DOM.seatbeltLabel.textContent = belted ? 'ON' : 'OFF';
+      } else {
+        DOM.vehicleStatus.classList.add('hidden');
+      }
+
       if (!state.hasStatus) {
         DOM.rowHunger.classList.add('hidden');
         DOM.rowThirst.classList.add('hidden');
@@ -641,7 +681,6 @@ applyIconStyle(state.iconStyle);
 restorePositions();
 wireSettings();
 
-// Hide hunger/thirst until esx_status sends data
 DOM.rowHunger.classList.add('hidden');
 DOM.rowThirst.classList.add('hidden');
 

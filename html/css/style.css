@@ -20,7 +20,8 @@ html, body {
   --clr-border:   rgba(255,255,255,0.08);
   --clr-text:     #e8eaf0;
   --clr-muted:    rgba(200,210,230,0.55);
-  --clr-accent:   #6c7fff;
+  --clr-accent:     #6c7fff;
+  --clr-accent-rgb: 108,127,255;
 
   --clr-health: #e84c4c;
   --clr-armor:  #4ca8e8;
@@ -980,5 +981,85 @@ body[data-icon-style="5"] .stat-icon {
   font-size: 0.95rem; font-weight: 700;
   color: var(--clr-accent);
   letter-spacing: 1px;
-  text-shadow: 0 0 10px rgba(108,127,255,0.5);
+  text-shadow: 0 0 10px rgba(var(--clr-accent-rgb), 0.5);
 }
+
+/* ════════════════════════════════════════════════════════════════
+   VEHICLE STATUS PANEL
+════════════════════════════════════════════════════════════════ */
+#vehicle-status {
+  display: flex; flex-direction: column; gap: 6px; width: 100%;
+}
+
+.engine-icon { background: rgba(76,232,132,0.2); }
+.engine-icon svg { fill: #4ce884; }
+.fuel-icon   { background: rgba(76,232,208,0.2); }
+.fuel-icon svg { fill: var(--clr-thirst); }
+
+.engine-fill {
+  background: var(--clr-engine, #4ce884);
+  box-shadow: 0 0 6px rgba(76,232,132,0.5);
+  transition: background-color 0.5s ease, width 0.4s cubic-bezier(0.4,0,0.2,1);
+}
+.fuel-fill {
+  background: var(--clr-thirst);
+  box-shadow: 0 0 6px rgba(76,232,208,0.6);
+}
+
+/* Seatbelt */
+.seatbelt-icon { background: rgba(255,255,255,0.08); transition: background .3s, box-shadow .3s; }
+.seatbelt-icon svg { fill: var(--clr-muted); transition: fill .3s; }
+
+#vrow-seatbelt.belted .seatbelt-icon {
+  background: rgba(76,232,132,0.2);
+  box-shadow: 0 0 8px rgba(76,232,132,0.4);
+}
+#vrow-seatbelt.belted .seatbelt-icon svg { fill: #4ce884; }
+#vrow-seatbelt.belted #seatbelt-label { color: #4ce884; }
+
+#vrow-seatbelt.unbelted .seatbelt-icon {
+  background: rgba(232,76,76,0.2);
+  animation: seatbelt-blink 0.75s ease-in-out infinite;
+}
+#vrow-seatbelt.unbelted .seatbelt-icon svg { fill: #e84c4c; }
+#vrow-seatbelt.unbelted #seatbelt-label { color: #e84c4c; }
+
+@keyframes seatbelt-blink {
+  0%, 100% { box-shadow: 0 0 10px rgba(232,76,76,0.7); }
+  50%       { box-shadow: 0 0 2px  rgba(232,76,76,0.15); }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   THEME SELECTOR
+════════════════════════════════════════════════════════════════ */
+.theme-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  margin-top: 6px;
+}
+
+.theme-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 7px;
+  padding: 12px 6px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  cursor: pointer; pointer-events: auto;
+  transition: all .2s;
+}
+.theme-btn:hover { background: rgba(255,255,255,0.08); }
+.theme-btn.active {
+  background: rgba(255,255,255,0.08);
+  border-color: var(--clr-accent);
+  box-shadow: 0 0 0 1px var(--clr-accent);
+}
+
+.theme-swatch {
+  display: block; width: 30px; height: 30px; border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+}
+
+.theme-name {
+  font-family: 'Exo 2', sans-serif; font-size: 0.7rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.5px; color: var(--clr-muted);
+}
+.theme-btn.active .theme-name { color: var(--clr-text); }

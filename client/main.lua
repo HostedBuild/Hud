@@ -11,13 +11,12 @@ local settings = {
 Citizen.CreateThread(function()
     ESX = exports['es_extended']:getSharedObject()
 
-    -- Override ESX.ShowNotification to pipe into our custom NUI
     ESX.ShowNotification = function(msg, notifType, length)
         SendNUIMessage({
-            action   = 'notification',
+            action    = 'notification',
             notifType = notifType or 'info',
-            msg      = msg,
-            duration = (length or 4) * 1000,
+            msg       = msg,
+            duration  = (length or 4) * 1000,
         })
     end
 
@@ -55,7 +54,7 @@ AddEventHandler('onClientResourceStart', function(resourceName)
     SendNUIMessage({ action = 'show' })
 end)
 
--- ─── Export: altri resource possono triggerare notifiche custom ──────────────
+-- ─── Export notifiche ────────────────────────────────────────────────────────
 exports('showNotification', function(msg, notifType, duration)
     SendNUIMessage({
         action    = 'notification',
@@ -65,22 +64,16 @@ exports('showNotification', function(msg, notifType, duration)
     })
 end)
 
--- ─── Voice activity ─────────────────────────────────────────────────────────
--- pma-voice
+-- ─── Voice events ────────────────────────────────────────────────────────────
 AddEventHandler('pma-voice:setTalkingMode', function(mode)
     SendNUIMessage({ action = 'voiceState', mode = mode })
 end)
-
 AddEventHandler('pma-voice:proximityChanged', function(range)
     SendNUIMessage({ action = 'voiceRange', range = range })
 end)
-
--- mumble-voip
 AddEventHandler('mumble-voip:talking', function(isTalking)
     SendNUIMessage({ action = 'voiceState', mode = isTalking and 1 or 0 })
 end)
-
--- SaltyChat
 AddEventHandler('SaltyChat_TalkStateChanged', function(isTalking)
     SendNUIMessage({ action = 'voiceState', mode = isTalking and 1 or 0 })
 end)
@@ -96,28 +89,20 @@ RegisterNUICallback('closeSettings', function(_, cb)
     SetNuiFocus(false, false)
     cb('ok')
 end)
-
-RegisterNUICallback('enterDragMode', function(_, cb)
-    cb('ok')
-end)
-
+RegisterNUICallback('enterDragMode', function(_, cb) cb('ok') end)
 RegisterNUICallback('exitDragMode', function(_, cb)
     SetNuiFocus(false, false)
     cb('ok')
 end)
-
 RegisterNUICallback('applySettings', function(data, cb)
     settings.hudDisabled   = data.hudDisabled   or false
     settings.cinematicMode = data.cinematicMode or false
     settings.hideRadar     = data.hideRadar     or false
     settings.minimapCircle = data.minimapCircle or false
-
     SetResourceKvp('hud_settings', json.encode(settings))
     pcall(SetMinimapClipType, settings.minimapCircle and 1 or 0)
-
     cb('ok')
 end)
-
 RegisterNUICallback('hudReady', function(_, cb) cb('ok') end)
 
 -- ─── Every-frame: enforce display flags ──────────────────────────────────────
@@ -145,10 +130,15 @@ Citizen.CreateThread(function()
         local vehicle   = GetVehiclePedIsIn(ped, false)
         local inVehicle = vehicle ~= 0
         local speed, gear, rpm = 0, 0, 0.0
+        local engineHealth, fuelLevel, seatbelt = 100, 100, false
+
         if inVehicle then
-            speed = math.floor(GetEntitySpeed(vehicle) * 3.6)
-            gear  = GetVehicleCurrentGear(vehicle)
-            rpm   = GetVehicleCurrentRpm(vehicle)
+            speed        = math.floor(GetEntitySpeed(vehicle) * 3.6)
+            gear         = GetVehicleCurrentGear(vehicle)
+            rpm          = GetVehicleCurrentRpm(vehicle)
+            engineHealth = math.max(0, math.floor(GetVehicleEngineHealth(vehicle) / 10))
+            fuelLevel    = math.max(0, math.floor(GetVehicleFuelLevel(vehicle)))
+            seatbelt     = not GetPedConfigFlag(ped, 32, true)
         end
 
         local x, y, z      = table.unpack(GetEntityCoords(ped))
@@ -173,15 +163,18 @@ Citizen.CreateThread(function()
         end
 
         SendNUIMessage({
-            action    = 'update',
-            health    = health,    armor     = armor,  stamina = stamina,
-            speed     = speed,     gear      = gear,   rpm     = rpm,
-            inVehicle = inVehicle,
-            street    = streetName, zone     = zoneName,
-            compass   = compass,
-            time      = timeStr,
-            cash      = cash,      bank      = bank,
-            job       = jobLabel,  grade     = jobGrade,
+            action       = 'update',
+            health       = health,    armor    = armor,  stamina = stamina,
+            speed        = speed,     gear     = gear,   rpm     = rpm,
+            inVehicle    = inVehicle,
+            engineHealth = engineHealth,
+            fuelLevel    = fuelLevel,
+            seatbelt     = seatbelt,
+            street       = streetName, zone    = zoneName,
+            compass      = compass,
+            time         = timeStr,
+            cash         = cash,      bank     = bank,
+            job          = jobLabel,  grade    = jobGrade,
         })
     end
 end)
@@ -193,7 +186,7 @@ function headingToCompass(h)
     return dirs[math.floor((h + 22.5) / 45) % 8 + 1]
 end
 
--- ─── esx_status (optional) ───────────────────────────────────────────────────
+-- ─── esx_status (opzionale) ──────────────────────────────────────────────────
 AddEventHandler('esx_status:onTick', function(statuses)
     local hunger, thirst = 100, 100
     for _, s in ipairs(statuses) do
