@@ -99,7 +99,23 @@ body.drag-mode .draggable:active { cursor: grabbing !important; }
    HUD PANELS — shared base
 ════════════════════════════════════════════════════════════════ */
 .hud-panel {
-  transition: opacity 0.3s ease;
+  /* --panel-fade is overridden by JS on death to slow the transition */
+  transition: opacity var(--panel-fade, 0.3s) ease;
+}
+
+/* ── Morte: fade-out lento ── */
+body.dead .hud-panel {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── Screenshot: hide istantaneo ── */
+body.screenshot-mode .hud-panel,
+body.screenshot-mode #notif-wrap,
+body.screenshot-mode #health-vignette {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0s !important;
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -252,8 +268,18 @@ body.drag-mode .draggable:active { cursor: grabbing !important; }
 .hunger-fill { background: var(--clr-hunger); box-shadow: 0 0 6px rgba(232,168,76,0.6); }
 .thirst-fill { background: var(--clr-thirst); box-shadow: 0 0 6px rgba(76,232,208,0.6); }
 
-.bar-fill.low { animation: bar-pulse 1s ease-in-out infinite; }
+.bar-fill.low  { animation: bar-pulse 1s ease-in-out infinite; }
+.bar-fill.high { animation: bar-pulse 1s ease-in-out infinite; }
 @keyframes bar-pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
+
+/* ── Stress ── */
+.stress-icon { background: rgba(200,100,255,0.2); }
+.stress-icon svg { fill: #c864ff; }
+.stress-fill {
+  background: var(--clr-stress, #c864ff);
+  box-shadow: 0 0 6px rgba(200,100,255,0.5);
+  transition: background-color 0.5s ease, width 0.4s cubic-bezier(0.4,0,0.2,1);
+}
 
 /* ════════════════════════════════════════════════════════════════
    BOTTOM RIGHT — Street / Compass / Speedometer

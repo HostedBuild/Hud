@@ -80,6 +80,12 @@ exports('showNotification', function(msg, notifType, duration)
     })
 end)
 
+exports('setStress', function(value)
+    if Config.StressEnabled then
+        SendNUIMessage({ action = 'stress', value = math.max(0, math.min(100, math.floor(tonumber(value) or 0))) })
+    end
+end)
+
 -- ─── Voice events ────────────────────────────────────────────────────────────
 local vs = Config.VoiceSystem
 
@@ -104,11 +110,25 @@ if vs == 'auto' or vs == 'saltychat' then
     end)
 end
 
+-- ─── Stress event custom ─────────────────────────────────────────────────────
+if Config.StressEnabled and Config.StressEvent then
+    AddEventHandler(Config.StressEvent, function(value)
+        SendNUIMessage({ action = 'stress', value = math.max(0, math.min(100, math.floor(tonumber(value) or 0))) })
+    end)
+end
+
 -- ─── Comando impostazioni ────────────────────────────────────────────────────
 RegisterCommand(Config.SettingsCommand, function()
     SetNuiFocus(true, true)
     SendNUIMessage({ action = 'openSettings', settings = settings })
 end, false)
+
+-- ─── Tasto screenshot ────────────────────────────────────────────────────────
+RegisterKeyMapping('+hud_screenshot', 'HUD: Modalità Screenshot (nascondi/mostra HUD)', 'keyboard', Config.ScreenshotKey)
+RegisterCommand('+hud_screenshot', function()
+    SendNUIMessage({ action = 'toggleScreenshot' })
+end, false)
+RegisterCommand('-hud_screenshot', function() end, false)
 
 -- ─── NUI Callbacks ───────────────────────────────────────────────────────────
 RegisterNUICallback('closeSettings', function(_, cb)
@@ -143,7 +163,15 @@ end)
 
 -- ─── Main update loop ────────────────────────────────────────────────────────
 Citizen.CreateThread(function()
-    local speedMult  = Config.SpeedUnit == 'mph' and 2.237 or 3.6
+    local speedMult = Config.SpeedUnit == 'mph' and 2.237 or 3.6
+
+    -- Warning cooldown trackers
+    local lastHealthWarn = -math.huge
+    local lastFuelWarn   = -math.huge
+    local lastEngineWarn = -math.huge
+
+    -- Death state tracker
+    local wasDead = false
 
     while true do
         Citizen.Wait(Config.UpdateInterval)
@@ -167,6 +195,35 @@ Citizen.CreateThread(function()
             engineHealth = math.max(0, math.floor(GetVehicleEngineHealth(vehicle) / 10))
             fuelLevel    = math.max(0, math.floor(GetVehicleFuelLevel(vehicle)))
             seatbelt     = not GetPedConfigFlag(ped, 32, true)
+        end
+
+        -- Death detection
+        local isDead = IsEntityDead(ped)
+        if isDead ~= wasDead then
+            wasDead = isDead
+            SendNUIMessage({ action = isDead and 'death' or 'alive' })
+        end
+
+        -- Auto warnings (solo se vivo)
+        if Config.Warnings.enabled and not isDead then
+            local now = GetGameTimer()
+            if health <= Config.Warnings.healthThreshold and (now - lastHealthWarn) >= Config.Warnings.cooldown then
+                lastHealthWarn = now
+                SendNUIMessage({ action = 'notification', notifType = 'error',
+                    msg = '❤ Salute critica! Cerca assistenza medica.', duration = 5500 })
+            end
+            if inVehicle then
+                if fuelLevel <= Config.Warnings.fuelThreshold and (now - lastFuelWarn) >= Config.Warnings.cooldown then
+                    lastFuelWarn = now
+                    SendNUIMessage({ action = 'notification', notifType = 'warning',
+                        msg = '⛽ Carburante quasi esaurito!', duration = 5000 })
+                end
+                if engineHealth <= Config.Warnings.engineThreshold and (now - lastEngineWarn) >= Config.Warnings.cooldown then
+                    lastEngineWarn = now
+                    SendNUIMessage({ action = 'notification', notifType = 'error',
+                        msg = '🔧 Motore gravemente danneggiato!', duration = 5500 })
+                end
+            end
         end
 
         local x, y, z      = table.unpack(GetEntityCoords(ped))
@@ -217,12 +274,17 @@ end
 -- ─── esx_status ──────────────────────────────────────────────────────────────
 if Config.StatusResource then
     AddEventHandler('esx_status:onTick', function(statuses)
-        local hunger, thirst = 100, 100
+        local hunger, thirst, stress = 100, 100, 0
         for _, s in ipairs(statuses) do
-            if s.name == 'hunger' then hunger = math.floor(s.percent * 100)
+            if     s.name == 'hunger' then hunger = math.floor(s.percent * 100)
             elseif s.name == 'thirst' then thirst = math.floor(s.percent * 100)
+            elseif s.name == 'stress' and Config.StressEnabled then
+                stress = math.floor(s.percent * 100)
             end
         end
         SendNUIMessage({ action = 'status', hunger = hunger, thirst = thirst })
+        if Config.StressEnabled then
+            SendNUIMessage({ action = 'stress', value = stress })
+        end
     end)
 end

@@ -85,3 +85,26 @@ Config.DefaultVisibility = {
     street  = true,
     speed   = true,
 }
+
+-- ── Avvisi automatici ─────────────────────────────────────────────────────────
+-- Notifiche toast automatiche quando salute/carburante/motore sono critici.
+Config.Warnings = {
+    enabled         = true,
+    healthThreshold = 20,     -- HP sotto cui avvisare (0–100)
+    fuelThreshold   = 15,     -- % carburante sotto cui avvisare
+    engineThreshold = 30,     -- % motore sotto cui avvisare
+    cooldown        = 30000,  -- ms minimo tra due avvisi dello stesso tipo
+}
+
+-- ── Modalità screenshot ───────────────────────────────────────────────────────
+-- Tasto per nascondere/mostrare istantaneamente tutto l'HUD.
+-- Deve corrispondere a un tasto riconosciuto da FiveM (es: 'F6', 'F7').
+Config.ScreenshotKey = 'F6'
+
+-- ── Stress ───────────────────────────────────────────────────────────────────
+-- Barra stress: rimane nascosta finché non arrivano dati dallo script.
+Config.StressEnabled = false
+-- Evento Lua da cui leggere il valore stress (0–100).
+-- nil = usa solo esx_status se contiene un campo 'stress'.
+-- Esempi: 'esx_stress:setStress', 'bd-stress:updateStress'
+Config.StressEvent = nil

@@ -11,6 +11,7 @@ const DOM = {
   armorBar:  $('armor-bar'),  armorVal:  $('armor-val'),
   hungerBar: $('hunger-bar'), hungerVal: $('hunger-val'),
   thirstBar: $('thirst-bar'), thirstVal: $('thirst-val'),
+  stressBar: $('stress-bar'), stressVal: $('stress-val'), rowStress: $('row-stress'),
   rowHunger: $('row-hunger'), rowThirst: $('row-thirst'),
   speedometer: $('speedometer'), speedUnit: $('speed-unit'),
   speedVal: $('speed-value'), gearVal: $('gear-val'), rpmFill: $('rpm-fill'),
@@ -32,18 +33,17 @@ const DOM = {
   // cinematic
   cinTop: $('cinematic-top'),
   cinBot: $('cinematic-bottom'),
-  // vignette / notifications / voice
+  // misc
   vignette:      $('health-vignette'),
   notifWrap:     $('notif-wrap'),
   rowVoice:      $('row-voice'),
   voiceLabel:    $('voice-state-label'),
   playerIdValue: $('player-id-value'),
   playerIdRow:   $('player-id-row'),
-  // drag
-  dragBanner: $('drag-banner'),
+  dragBanner:    $('drag-banner'),
 };
 
-// ─── CONFIG (valori di default; sovrascrittti da loadConfig) ─────────────────
+// ─── CONFIG (default; sovrascritto da loadConfig) ────────────────────────────
 const cfg = {
   speedUnit:        'km/h',
   vignetteLow:      40,
@@ -58,10 +58,12 @@ const cfg = {
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
 const state = {
-  hasStatus: false,
-  inVehicle: false,
-  iconStyle: 1,
-  theme: 'indaco',
+  hasStatus:      false,
+  inVehicle:      false,
+  iconStyle:      1,
+  theme:          'indaco',
+  screenshotMode: false,
+  dead:           false,
 
   vis: {
     health: true, armor: true,
@@ -156,6 +158,44 @@ function updateEngineBar(val) {
   animateCount(DOM.engineVal, val);
 }
 
+// ─── STRESS BAR ──────────────────────────────────────────────────────────────
+function setStressBar(value) {
+  const pct = Math.min(100, Math.max(0, value));
+  DOM.stressBar.style.width = pct + '%';
+  // Colour shifts with level: calm → tense → critical
+  const clr = pct < 40
+    ? 'var(--clr-cash)'    // verde – rilassato
+    : pct < 70
+      ? 'var(--clr-hunger)' // arancione – sotto stress
+      : 'var(--clr-health)'; // rosso – stress elevato
+  DOM.stressBar.style.setProperty('--clr-stress', clr);
+  DOM.stressBar.classList.toggle('high', pct >= 70);
+  animateCount(DOM.stressVal, value);
+}
+
+// ─── SCREENSHOT MODE ─────────────────────────────────────────────────────────
+function toggleScreenshotMode() {
+  state.screenshotMode = !state.screenshotMode;
+  document.body.classList.toggle('screenshot-mode', state.screenshotMode);
+}
+
+// ─── DEATH ───────────────────────────────────────────────────────────────────
+function onDeath() {
+  if (state.dead) return;
+  state.dead = true;
+  // Slow transition for all panels
+  document.body.style.setProperty('--panel-fade', '1.5s');
+  document.body.classList.add('dead');
+}
+
+function onAlive() {
+  if (!state.dead) return;
+  state.dead = false;
+  document.body.classList.remove('dead');
+  // Reset to fast transition after fade-in completes
+  setTimeout(() => document.body.style.removeProperty('--panel-fade'), 900);
+}
+
 // ─── VISIBILITY ──────────────────────────────────────────────────────────────
 function applyVisibility() {
   const v = state.vis;
@@ -165,11 +205,11 @@ function applyVisibility() {
     toggleEl(DOM.rowHunger, v.hunger);
     toggleEl(DOM.rowThirst, v.thirst);
   }
-  toggleEl(DOM.topRight,       v.money);
-  toggleEl($('job-card'),      v.job);
-  toggleEl(DOM.topLeft,        v.clock);
-  toggleEl($('compass-wrap'),  v.compass);
-  toggleEl($('street-info'),   v.street);
+  toggleEl(DOM.topRight,      v.money);
+  toggleEl($('job-card'),     v.job);
+  toggleEl(DOM.topLeft,       v.clock);
+  toggleEl($('compass-wrap'), v.compass);
+  toggleEl($('street-info'),  v.street);
   if (!v.speed) {
     DOM.speedometer.classList.add('hidden');
   } else if (state.inVehicle) {
@@ -399,7 +439,7 @@ function openSettings(luaSettings) {
   }
 
   snapshot = {
-    vis:          { ...state.vis },
+    vis:           { ...state.vis },
     minimapCircle: state.minimapCircle,
     hideRadar:     state.hideRadar,
     hudDisabled:   state.hudDisabled,
@@ -606,6 +646,24 @@ window.addEventListener('message', function(e) {
 
     case 'openSettings':
       openSettings(data.settings);
+      break;
+
+    case 'toggleScreenshot':
+      toggleScreenshotMode();
+      break;
+
+    case 'death':
+      onDeath();
+      break;
+
+    case 'alive':
+      onAlive();
+      break;
+
+    case 'stress':
+      if (DOM.rowStress.classList.contains('hidden'))
+        DOM.rowStress.classList.remove('hidden');
+      setStressBar(data.value ?? 0);
       break;
 
     case 'status':
